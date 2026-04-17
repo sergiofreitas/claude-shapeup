@@ -66,9 +66,9 @@ Apply these questions to ANY piece of work that surfaces:
 - Listed as regular tasks on the scope
 
 ### Nice-to-Haves (marked with `~`)
-- Done if time permits
-- Cut without guilt when time runs out
-- Usually never get built — and that's fine
+- Done if sessions remain after must-haves are complete
+- Cut without guilt when the session budget is exhausted
+- Tracked in handovers so they're considered in future sessions
 - Can apply to individual tasks OR entire scopes
 
 ### Out of Bounds (from pitch No-Gos)

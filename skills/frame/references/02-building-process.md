@@ -112,7 +112,7 @@ Scopes are **discovered through real work**, not planned upfront.
 | Pattern | Description | Strategy |
 |---------|-------------|----------|
 | **Layer Cake** | Even UI and backend work | Estimate by UI surface area. Default for info systems. |
-| **Iceberg** | Backend vastly exceeds UI (or vice versa) | Factor UI out as separate scope. Split backend into independent pieces. |
+| **Iceberg** | Backend vastly exceeds UI (or vice versa) | Split into independent scopes by business capability. Each scope should still deliver a verifiable end-to-end slice, even if it's backend-heavy. |
 | **Upside-down Iceberg** | UI vastly exceeds backend | Question if complexity is necessary. Simplify if possible. |
 | **Chowder** | Loose tasks that don't fit anywhere | Keep one list, max 3-5 items. If longer, a scope is hiding in there. |
 

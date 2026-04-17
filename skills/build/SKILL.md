@@ -58,7 +58,20 @@ Your job:
 
 ### Step 0: Determine Session Type
 
-Check if this is a **first session** or a **continuation**:
+First, check if this feature has already been completed or shipped:
+
+```bash
+# Check if already shipped
+ls -d <project-root>/.shapeup/<NNN>-*-shipped 2>/dev/null
+
+# Check if build is already complete
+cat <project-root>/.shapeup/<NNN>-*/build-summary.md 2>/dev/null
+```
+
+- **Folder ends in `-shipped`** → STOP. Tell user: "Feature <NNN> is already shipped. To iterate, frame a new feature."
+- **`build-summary.md` exists** → STOP. Tell user: "Build is complete. Run `/ship <NNN>` to archive and document decisions."
+
+Then, check if this is a **first session** or a **continuation**:
 
 ```bash
 # Check for existing handover files
@@ -172,12 +185,38 @@ After the first piece, scopes emerge from real work:
    <Context, decisions, blockers>
    ```
 
-4. **Validate scope quality** — three checks:
+4. **Validate scope quality** — four checks:
    - Can you see the whole project at macro level?
-   - Do scope names feel natural to discuss?
+   - Do scope names describe a **business capability or user outcome**, not a technical layer?
    - Do new tasks easily categorize into existing scopes?
-   - If a scope is too big → split it
-   - If a scope name is generic ("frontend", "bugs") → it's a grab-bag, redraw it
+   - Does each scope deliver **end-to-end functionality** that can be verified independently?
+   - If a scope is too big → split it by business capability, not by layer
+   - If a scope is organized by technical concern (all migrations, all endpoints, all UI) → it's a horizontal split, redraw it around what the customer can do when it's done
+
+   **Examples:**
+   - WRONG: `scope-database-migrations`, `scope-api-endpoints`, `scope-frontend-forms`
+   - RIGHT: `scope-user-can-filter-invoices` (migration + model + endpoint + UI for filtering)
+   - RIGHT (API-only project): `scope-invoice-filtering` (migration + model + endpoint + validation + response shaping for the filter capability)
+
+### Handling User Feedback During Build
+
+User questions, concerns, and discoveries during build are **emergent scope** — they are a
+natural and expected part of the build process. They are NOT signals that shaping was incomplete.
+
+When a user raises a new requirement, concern, or question during a build session:
+
+1. **Capture it as a task** in an existing scope, or create a new scope if it doesn't fit
+2. **Apply scope hammering** (Gate 1): Is it a must-have or nice-to-have?
+   - Default: nice-to-have (`~`). Elevate only if truly critical to the core feature.
+3. **Update the hill chart** if a new scope was created
+4. **Continue building** — do not suggest re-framing or re-shaping
+
+The package defines the problem, appetite, and boundaries (no-gos). Scopes are where the
+actual work lives, and scopes evolve throughout the build. This is expected.
+
+**Never** respond to build-time feedback by suggesting the user re-run `/frame` or `/shape`.
+The only exception: if the user's feedback reveals that the **core problem itself was wrong**
+(not a new requirement, but a fundamental misunderstanding of the problem). This is rare.
 
 ### Step 4: Execute Scopes (Main Build Loop)
 
@@ -224,22 +263,50 @@ If this is NOT the first session:
 **Monitor your session capacity.** When you sense the session is getting long and significant
 work remains, trigger an interactive scope hammering session:
 
-1. **Assess remaining work**:
+1. **Check session budget**:
+   ```bash
+   # Count sessions used (handover files = completed sessions)
+   SESSIONS_USED=$(ls <feature-dir>/handover-*.md 2>/dev/null | wc -l)
+   # Current session counts too
+   SESSIONS_USED=$((SESSIONS_USED + 1))
+   ```
+   Read the appetite from `package.md` (Small=1, Medium=2-3, Big=4-5 sessions).
+
+2. **Assess remaining work**:
    - How many scopes are still uphill?
    - How many must-have tasks remain?
+   - How many nice-to-have tasks remain?
    - Is there anything stuck?
 
-2. **If capacity is tight**, use AskUserQuestion:
+3. **If capacity is tight**, use AskUserQuestion:
    - Present the remaining scopes and their hill positions
    - For each scope with remaining work, ask:
      - "This scope has N must-haves left. Should we: keep as must-have / mark as nice-to-have / cut entirely?"
    - For any scope still uphill:
      - "This scope still has unknowns. Should we: push through / simplify / defer to next session / cut?"
 
-3. **Apply decisions**: Update scope files and hillchart.md
+4. **Apply decisions**: Update scope files and hillchart.md
 
-4. **If work remains after hammering** → proceed to Step 7 (Handover)
-5. **If all must-haves are done** → proceed to Step 8 (Ready to Ship)
+5. **If work remains after hammering** → proceed to Step 7 (Handover)
+6. **If all must-haves are done** → proceed to Step 6b (Nice-to-Have Check)
+
+### Step 6b: Nice-to-Have Check
+
+Before shipping, check if the session budget allows for nice-to-have work:
+
+1. **Count remaining sessions**: Compare sessions used (handover count + 1) against appetite.
+2. **Collect outstanding nice-to-haves**: Scan scope files for `~ ` tasks not yet completed.
+
+3. **If sessions remain AND nice-to-haves exist**, use AskUserQuestion:
+   - "All must-haves are complete. You've used <N> of <appetite> sessions. There are <M> nice-to-haves remaining:
+     - <list nice-to-haves>
+   - Want to tackle some before shipping, or ship now?"
+   - Options: "Continue with nice-to-haves" / "Ship now"
+
+4. **If user chooses to continue**: Pick highest-value nice-to-haves and execute using the same
+   TDD cycle from Step 4. Update scope files and hill chart as you go.
+
+5. **When done with nice-to-haves** (or user chose to ship) → proceed to Step 8 (Ready to Ship)
 
 ### Step 7: Write Handover
 
@@ -277,6 +344,10 @@ When the session must end with work remaining:
 
    ## Scope Hammering Decisions Made
    - <What was cut or marked nice-to-have and why>
+
+   ## Outstanding Nice-to-Haves
+   - <Scope>: <task description>
+   - <Scope>: <task description>
 
    ## Code Changes
    - <Files modified>
@@ -365,3 +436,5 @@ When all must-haves are complete and all scopes are downhill or done:
 - **Pushing through when uphill at session end**: That's a shaping failure. Hand over, don't heroics.
 - **Organizing by role**: Not "designer tasks" and "programmer tasks". Organize by scope.
 - **Mixing reactive work**: Bugs and incidents are separate. Don't let them eat the build sessions.
+- **Organizing scopes by technical layer**: "backend", "frontend", "database" are not scopes — they're horizontal slices. Organize scopes around business capabilities: what can the customer do when this scope is done? Even in a backend-only project, a scope should deliver a complete, verifiable capability (e.g., migration + model + endpoint + validation for a specific customer action), not a technical layer.
+- **Re-framing or re-shaping when new requirements surface during build**: Requirements discovered during build are emergent scope. Capture them as tasks in existing or new scopes. Apply scope hammering rules. Never suggest going back to `/frame` or `/shape`.
