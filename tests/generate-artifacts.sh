@@ -71,23 +71,22 @@ $(cat "$fixture_dir/handover-01.md")"
   fi
 
   # Build the generation prompt
-  local gen_prompt
-  gen_prompt=$(cat <<GENPROMPT
-This is a planning-only dry run of the Build skill. Do NOT write actual code.
+  local instructions
+  instructions='This is a planning-only dry run of the Build skill. Do NOT write actual code.
 
 You are given a shaped Package with Shape Go approval. Simulate the build process
 and produce ONLY these Shape Up build artifacts:
 
 1. orientation.md — Your orientation analysis:
    - Problem Restated (in your own words, not copy-pasted)
-   - Codebase Observations (what you'd expect to find)
+   - Codebase Observations (what you would expect to find)
    - Imagined vs. Discovered (tensions between package and reality)
    - First Piece Selection (with Core/Small/Novel reasoning)
 
 2. scopes/ directory with:
-   - scopes/unscoped.md — tasks that don't fit a scope yet
-   - scopes/scope-<name>.md for each discovered scope, containing:
-     - Hill Position (▲/▼/✓)
+   - scopes/unscoped.md — tasks that do not fit a scope yet
+   - scopes/scope-NAME.md for each discovered scope, containing:
+     - Hill Position
      - Prioritization Reasoning (risk, dependencies, WHY this order)
      - Must-Haves (task list)
      - Nice-to-Haves (~) if any
@@ -106,31 +105,54 @@ IMPORTANT scope rules:
 - Do NOT name scopes "backend-X", "frontend-X", "database-X"
 - Scopes must differ from Package element names
 
-=== PACKAGE ===
-$(cat "$package_path")
-$handover_context
-
 Write each artifact as a separate section with clear delimiters:
 --- FILE: orientation.md ---
 (content)
 --- FILE: scopes/unscoped.md ---
 (content)
---- FILE: scopes/scope-<name>.md ---
+--- FILE: scopes/scope-NAME.md ---
 (content)
 --- FILE: hillchart.md ---
-(content)
-GENPROMPT
-)
+(content)'
+
+  local package_content
+  package_content=$(cat "$package_path")
+
+  local gen_prompt="${instructions}
+
+=== PACKAGE ===
+${package_content}
+${handover_context}"
 
   # Generate via claude -p
   echo "  Running claude -p (this may take 30-60 seconds)..."
+
+  # Write prompt to temp file to avoid argument length limits
+  local prompt_file
+  prompt_file=$(mktemp)
+  echo "$gen_prompt" > "$prompt_file"
+
+  local system_file
+  system_file=$(mktemp)
+  cat "$BUILD_SKILL" > "$system_file"
+
   local output
-  output=$(echo "$gen_prompt" | claude -p \
-    --append-system-prompt "$(cat "$BUILD_SKILL")" \
+  output=$(claude -p "$(cat "$prompt_file")" \
+    --append-system-prompt "$(cat "$system_file")" \
     2>/dev/null) || {
-    echo -e "${RED}  Generation failed${NC}"
-    return 1
+    echo -e "${YELLOW}  First attempt failed. Retrying with trimmed prompt...${NC}"
+    # Retry with a shorter system prompt (skip reference index table)
+    sed '/^> \*\*Reference Index\*\*/,/^---$/d' "$system_file" > "${system_file}.trimmed"
+    output=$(claude -p "$(cat "$prompt_file")" \
+      --append-system-prompt "$(cat "${system_file}.trimmed")" \
+      2>/dev/null) || {
+      echo -e "${RED}  Generation failed${NC}"
+      rm -f "$prompt_file" "$system_file" "${system_file}.trimmed"
+      return 1
+    }
+    rm -f "${system_file}.trimmed"
   }
+  rm -f "$prompt_file" "$system_file"
 
   # Parse output into files
   echo "  Parsing artifacts..."
