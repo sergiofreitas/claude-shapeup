@@ -7,6 +7,7 @@ description: >
   For web projects, verifies with browser automation. Writes handover documents for multi-session
   continuity. Only use after a Package has Shape Go approval. Use when the user says "/build NNN"
   or "let's build feature NNN" or "start building NNN".
+allowed-tools: Bash Read Write Edit Glob Grep
 ---
 
 # Shape Up: Build
@@ -200,8 +201,9 @@ After the first piece, scopes emerge from real work:
 
 ### Handling User Feedback During Build
 
-User questions, concerns, and discoveries during build are **emergent scope** — they are a
-natural and expected part of the build process. They are NOT signals that shaping was incomplete.
+User questions, concerns, and discoveries during build are **emergent scope** — a natural and
+expected part of doing real work. The package defines the problem, appetite, and boundaries
+(no-gos). Scopes are where the actual work lives, and scopes evolve throughout the build.
 
 When a user raises a new requirement, concern, or question during a build session:
 
@@ -209,14 +211,27 @@ When a user raises a new requirement, concern, or question during a build sessio
 2. **Apply scope hammering** (Gate 1): Is it a must-have or nice-to-have?
    - Default: nice-to-have (`~`). Elevate only if truly critical to the core feature.
 3. **Update the hill chart** if a new scope was created
-4. **Continue building** — do not suggest re-framing or re-shaping
+4. **Continue building**
 
-The package defines the problem, appetite, and boundaries (no-gos). Scopes are where the
-actual work lives, and scopes evolve throughout the build. This is expected.
+Re-framing or re-shaping mid-build breaks momentum and signals to the user that the shaped
+solution was incomplete, when in reality scope emergence is the expected outcome of building.
+The only time to suggest going back to `/frame` or `/shape` is when the user's feedback reveals
+the **core problem itself was wrong** — a fundamental misunderstanding, not a new requirement.
+This is rare.
 
-**Never** respond to build-time feedback by suggesting the user re-run `/frame` or `/shape`.
-The only exception: if the user's feedback reveals that the **core problem itself was wrong**
-(not a new requirement, but a fundamental misunderstanding of the problem). This is rare.
+<example>
+User: "What about handling the case where the invoice has multiple currencies?"
+→ Add task `~ Handle multi-currency invoices` to scope-invoice-filtering
+→ Mark as nice-to-have (doesn't block core filtering capability)
+→ Continue building the current scope
+
+User: "We should also support exporting the filtered results"
+→ Create new scope `scope-export-filtered-results` with this as a must-have
+→ Add to hill chart as ▲ Uphill
+→ Continue current scope, tackle export scope by risk priority
+
+Do NOT respond with: "This sounds like it needs more shaping. Consider running /shape again."
+</example>
 
 ### Step 4: Execute Scopes (Main Build Loop)
 
@@ -265,12 +280,10 @@ work remains, trigger an interactive scope hammering session:
 
 1. **Check session budget**:
    ```bash
-   # Count sessions used (handover files = completed sessions)
-   SESSIONS_USED=$(ls <feature-dir>/handover-*.md 2>/dev/null | wc -l)
-   # Current session counts too
-   SESSIONS_USED=$((SESSIONS_USED + 1))
+   bash <skill-dir>/scripts/check-session-budget.sh <feature-dir>
    ```
-   Read the appetite from `package.md` (Small=1, Medium=2-3, Big=4-5 sessions).
+   This outputs: `sessions_used`, `appetite_label`, `appetite_max`, `sessions_remaining`,
+   `nice_to_haves`, and `must_haves_remaining`. Use these numbers for capacity decisions.
 
 2. **Assess remaining work**:
    - How many scopes are still uphill?
@@ -294,8 +307,11 @@ work remains, trigger an interactive scope hammering session:
 
 Before shipping, check if the session budget allows for nice-to-have work:
 
-1. **Count remaining sessions**: Compare sessions used (handover count + 1) against appetite.
-2. **Collect outstanding nice-to-haves**: Scan scope files for `~ ` tasks not yet completed.
+1. **Run the session budget script**:
+   ```bash
+   bash <skill-dir>/scripts/check-session-budget.sh <feature-dir>
+   ```
+2. **Read the output**: `sessions_remaining` and `nice_to_haves` tell you whether there's budget and work.
 
 3. **If sessions remain AND nice-to-haves exist**, use AskUserQuestion:
    - "All must-haves are complete. You've used <N> of <appetite> sessions. There are <M> nice-to-haves remaining:
@@ -436,5 +452,5 @@ When all must-haves are complete and all scopes are downhill or done:
 - **Pushing through when uphill at session end**: That's a shaping failure. Hand over, don't heroics.
 - **Organizing by role**: Not "designer tasks" and "programmer tasks". Organize by scope.
 - **Mixing reactive work**: Bugs and incidents are separate. Don't let them eat the build sessions.
-- **Organizing scopes by technical layer**: "backend", "frontend", "database" are not scopes — they're horizontal slices. Organize scopes around business capabilities: what can the customer do when this scope is done? Even in a backend-only project, a scope should deliver a complete, verifiable capability (e.g., migration + model + endpoint + validation for a specific customer action), not a technical layer.
-- **Re-framing or re-shaping when new requirements surface during build**: Requirements discovered during build are emergent scope. Capture them as tasks in existing or new scopes. Apply scope hammering rules. Never suggest going back to `/frame` or `/shape`.
+- **Organizing scopes by technical layer**: Horizontal splits (all migrations in one scope, all endpoints in another) prevent end-to-end verification until everything is stitched together — bugs hide at the seams. Organize scopes around what the customer can do when the scope is done: `scope-invoice-filtering` (migration + model + endpoint + response) can be tested independently, while `scope-backend-api` cannot.
+- **Re-framing or re-shaping when new requirements surface during build**: Build-time discoveries are emergent scope — capture them as tasks, apply scope hammering, and keep building. Going back to `/frame` or `/shape` breaks momentum and treats normal scope emergence as a shaping failure.

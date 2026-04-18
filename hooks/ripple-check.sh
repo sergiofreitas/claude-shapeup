@@ -60,6 +60,15 @@ Sibling docs:$SIBLINGS
 EOF
     ;;
   scope-*.md)
+    # Check for horizontal scope naming patterns
+    SCOPE_NAME=$(echo "$BASENAME" | sed 's/^scope-//; s/\.md$//')
+    if echo "$SCOPE_NAME" | grep -qiE '^(backend|frontend|database|api|ui|migrations?|infra|styling|testing|validation)(-|$)'; then
+      cat >&2 <<EOF
+SCOPE NAMING — scope '$SCOPE_NAME' looks like a technical layer, not a business capability.
+Scopes should describe what the customer can do when the scope is done.
+Example: instead of 'scope-api-endpoints', use 'scope-user-can-filter-invoices'.
+EOF
+    fi
     cat >&2 <<EOF
 RIPPLE CHECK — scope file was modified: $BASENAME
 Verify: Does hillchart.md reflect the current hill position of this scope?
