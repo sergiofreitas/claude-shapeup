@@ -53,12 +53,13 @@ parse_scenario() {
   local content
   content=$(cat "$scenario_file")
 
-  # Extract sections using awk
-  SCENARIO_SETUP=$(echo "$content" | awk '/^## Setup$/,/^## /' | head -n -1)
-  SCENARIO_PACKAGE=$(echo "$content" | awk '/^## Package Context$/,/^## /' | head -n -1)
-  SCENARIO_USER_INPUT=$(echo "$content" | awk '/^## User Input$/,/^## /' | head -n -1 | grep -v "^## User Input" | sed 's/^"//' | sed 's/"$//')
-  SCENARIO_CRITERIA=$(echo "$content" | awk '/^## Criteria$/,/^## /' | head -n -1 | grep -v "^## Criteria" | tr -d '[:space:]')
-  SCENARIO_EXPECTED=$(echo "$content" | awk '/^## Expected Behavior$/,/^$/' | head -n -1)
+  # Extract sections using sed (macOS-compatible)
+  # Each section starts with "## Title" and ends before the next "## "
+  SCENARIO_SETUP=$(echo "$content" | sed -n '/^## Setup$/,/^## /p' | sed '1d;$d')
+  SCENARIO_PACKAGE=$(echo "$content" | sed -n '/^## Package Context$/,/^## /p' | sed '1d;$d')
+  SCENARIO_USER_INPUT=$(echo "$content" | sed -n '/^## User Input$/,/^## /p' | sed '1d;$d' | sed 's/^"//;s/"$//')
+  SCENARIO_CRITERIA=$(grep -A1 "^## Criteria" "$scenario_file" | tail -1 | tr -d '[:space:]')
+  SCENARIO_EXPECTED=$(echo "$content" | sed -n '/^## Expected Behavior$/,$ p' | sed '1d')
 }
 
 # Determine which skill to use based on scenario setup

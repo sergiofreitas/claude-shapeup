@@ -19,17 +19,18 @@ YELLOW='\033[0;33m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-RUN_UNIT=true
-RUN_STRUCTURAL=true
-RUN_BEHAVIORAL=true
+RUN_UNIT=false
+RUN_STRUCTURAL=false
+RUN_BEHAVIORAL=false
 SKIP_GENERATE=false
+EXPLICIT_SELECTION=false
 
 # Parse args
 for arg in "$@"; do
   case "$arg" in
-    --unit)        RUN_STRUCTURAL=false; RUN_BEHAVIORAL=false ;;
-    --structural)  RUN_UNIT=false; RUN_BEHAVIORAL=false ;;
-    --behavioral)  RUN_UNIT=false; RUN_STRUCTURAL=false ;;
+    --unit)        RUN_UNIT=true; EXPLICIT_SELECTION=true ;;
+    --structural)  RUN_STRUCTURAL=true; EXPLICIT_SELECTION=true ;;
+    --behavioral)  RUN_BEHAVIORAL=true; EXPLICIT_SELECTION=true ;;
     --no-generate) SKIP_GENERATE=true ;;
     --help|-h)
       echo "Usage: $0 [--unit] [--structural] [--behavioral] [--no-generate]"
@@ -45,6 +46,13 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+# If no explicit selection, run all layers
+if [ "$EXPLICIT_SELECTION" = false ]; then
+  RUN_UNIT=true
+  RUN_STRUCTURAL=true
+  RUN_BEHAVIORAL=true
+fi
 
 TOTAL_PASS=0
 TOTAL_FAIL=0
