@@ -7,6 +7,7 @@ description: >
   with new patterns and principles, renames the feature folder to -shipped, and regenerates the
   Shape Up project dashboard. This is the final step that turns implementation experience into
   recorded knowledge for the team. Use when the user says "/ship NNN" or "let's ship feature NNN".
+allowed-tools: Bash Read Write Edit Glob Grep
 ---
 
 # Shape Up: Ship
@@ -18,15 +19,15 @@ Shipping archives a completed feature, captures architectural decisions, and upd
 >
 > | File | Contains | When to read |
 > |------|----------|-------------|
-> | `references/06-agent-workflow-guide.md` | Full pipeline overview, role mapping, status formats | **Read now** — core context for archival |
-> | `references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
-> | `references/03-pitch-template.md` | Package format (5 ingredients) | Read if you need to interpret the Package structure |
-> | `references/01-shaping-process.md` | How shaping works | Read if you need context for extracting shaping decisions |
-> | `references/02-building-process.md` | How building works | Read if you need context for extracting build decisions |
-> | `references/07-pitfalls.md` | Three critical failure modes | Read if you need to document lessons learned |
-> | `references/04-scope-hammering-rules.md` | Scope cutting decisions | Read if you need to document what was cut and why |
-> | `references/05-hill-chart-protocol.md` | Progress tracking model | Not needed during shipping |
-> | `references/08-framing.md` | Framing methodology | Not needed during shipping |
+> | `../../references/06-agent-workflow-guide.md` | Full pipeline overview, role mapping, status formats | **Read now** — core context for archival |
+> | `../../references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
+> | `../../references/03-pitch-template.md` | Package format (5 ingredients) | Read if you need to interpret the Package structure |
+> | `../../references/01-shaping-process.md` | How shaping works | Read if you need context for extracting shaping decisions |
+> | `../../references/02-building-process.md` | How building works | Read if you need context for extracting build decisions |
+> | `../../references/07-pitfalls.md` | Three critical failure modes | Read if you need to document lessons learned |
+> | `../../references/04-scope-hammering-rules.md` | Scope cutting decisions | Read if you need to document what was cut and why |
+> | `../../references/05-hill-chart-protocol.md` | Progress tracking model | Not needed during shipping |
+> | `../../references/08-framing.md` | Framing methodology | Not needed during shipping |
 >
 > **Do NOT read all references upfront.** Read the "Read now" file, then consult others only when a specific question arises during the session.
 
@@ -83,6 +84,9 @@ Your job:
 
 ### Step 2: Review and Extract Decisions
 
+If `decisions.md` already exists from the build phase, read it first. Use it as a starting
+point — only ask interactive questions to fill gaps, not to recreate work already captured.
+
 Go through the feature artifacts and identify:
 
 **A. Architectural Choices**
@@ -124,7 +128,15 @@ Create Architecture Decision Records in `docs/decisions/`:
    PADDED=$(printf "%04d" "$NEXT")
    ```
 
-3. Write one ADR per major decision (typically 1-4 per feature):
+3. Write one ADR per major decision (typically 1-4 per feature).
+
+   **Write an ADR only if the decision meets at least one of these criteria:**
+   - It involved choosing between 2+ materially different approaches
+   - It deferred work or accepted a known limitation
+   - It introduces a pattern the team should replicate in future features
+
+   Routine implementation details ("we used async/await", "we followed the existing REST pattern")
+   don't need ADRs — they're conventions, not decisions.
 
    ```markdown
    # ADR <NNNN>: <Decision Title>
@@ -166,6 +178,52 @@ Create Architecture Decision Records in `docs/decisions/`:
    - <What might need revisiting>
    - <What was deferred that could matter later>
    ```
+
+   <example>
+   # ADR 0003: Polling-Based Lead Notifications Instead of WebSockets
+
+   **Status**: Accepted
+   **Date**: 2026-04-15
+   **Feature**: 007 — lead-alerts
+
+   ## Context
+
+   Sales reps miss time-sensitive leads because they only check the dashboard twice daily.
+   The frame established that ~2 deals/month are lost to stale leads. We needed a way to
+   surface new leads within minutes, not hours.
+
+   ## Decision
+
+   Implemented 60-second polling from the dashboard to GET /api/leads?since=<timestamp>,
+   with a badge counter in the nav bar. No WebSocket infrastructure.
+
+   ## Rationale
+
+   WebSockets would deliver sub-second updates but require new infrastructure (connection
+   management, reconnection logic, load balancer config). Within a Medium Batch appetite,
+   polling delivers "minutes not hours" — which matches the frame's need — without the
+   infrastructure overhead.
+
+   ## Alternatives Considered
+
+   - **WebSockets**: Real-time but out of appetite — estimated 2 extra sessions for infrastructure alone
+   - **Server-Sent Events**: Simpler than WebSockets but still requires server-side connection management
+   - **Email notifications**: No code change needed but doesn't solve the "already in the app" workflow
+
+   ## Consequences
+
+   **Positive**:
+   - Zero infrastructure changes — uses existing REST endpoints
+   - Works with current load balancer configuration
+
+   **Negative / Trade-offs**:
+   - 60-second latency (vs sub-second with WebSockets)
+   - Adds ~1 req/min/user to API load
+
+   **Future considerations**:
+   - If user count grows past 500 concurrent, polling load may justify WebSocket migration
+   - Could reduce interval to 30s if 60s proves too slow for sales workflow
+   </example>
 
 ### Step 4: Update Architecture Documentation
 
@@ -259,8 +317,8 @@ Tell the user: "Feature <NNN> is shipped and archived. ADRs and architecture doc
 
 ## Anti-Patterns to Avoid
 
-- **Skipping ADRs**: "We'll remember why we did this" — no you won't. Write it down.
-- **Vague decisions**: "We chose approach A" without explaining WHY or what alternatives existed.
-- **Overwriting architecture docs**: Append, don't replace. The history matters.
-- **Not capturing what was cut**: Scope hammering decisions are valuable — they show what was deliberately excluded and why.
-- **Shipping without comparing to frame**: The frame stated a business outcome. Did we achieve it?
+- **Skipping ADRs**: Write an ADR for every meaningful trade-off because future shapers need to understand why constraints exist, not just what was built. Without ADRs, the next person to touch this area will re-investigate decisions that were already made.
+- **Vague decisions**: "We chose approach A" without explaining WHY or what alternatives existed. An ADR without alternatives and rationale is just a changelog entry — it doesn't prevent future teams from revisiting the same dead ends.
+- **Overwriting architecture docs**: Append, don't replace. The history of how architecture evolved shows which patterns worked and which were abandoned — overwriting erases that signal.
+- **Not capturing what was cut**: Scope hammering decisions show what was deliberately excluded and why. Without them, future shapers may re-discover and re-shape features that were intentionally cut.
+- **Shipping without comparing to frame**: The frame stated a business outcome. Comparing the shipped result to the frame validates that the investment paid off and closes the accountability loop.

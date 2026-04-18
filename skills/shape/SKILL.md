@@ -7,6 +7,7 @@ description: >
   until a Frame document exists with Frame Go approval. Run /frame first if needed. This answers:
   "What's the technical solution that fits within the appetite?" Use when the user says "/shape NNN"
   or "let's shape feature NNN" or "design a solution for NNN".
+allowed-tools: Bash Read Write Edit Glob Grep
 ---
 
 # Shape Up: Shape
@@ -18,15 +19,15 @@ Shaping designs a technical solution for a framed problem, de-risks it, and prod
 >
 > | File | Contains | When to read |
 > |------|----------|-------------|
-> | `references/01-shaping-process.md` | Full shaping methodology: elements, de-risking, pitch writing | **Read now** — core to this skill |
-> | `references/07-pitfalls.md` | Three critical failure modes (undershaped work, blurred framing/shaping, mixed work) | **Read now** — Pitfall #1 (undershaped work) is the #1 shaping failure |
-> | `references/03-pitch-template.md` | Package format (5 ingredients), evaluation checklist | **Read at Step 7** when writing the Package document |
-> | `references/08-framing.md` | Framing methodology, frame template | Read when validating the Frame Go status in Step 1 |
-> | `references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
-> | `references/02-building-process.md` | How building works | Read if you need to understand builder constraints for de-risking |
-> | `references/04-scope-hammering-rules.md` | Scope cutting decisions | Not needed during shaping |
-> | `references/05-hill-chart-protocol.md` | Progress tracking model | Not needed during shaping |
-> | `references/06-agent-workflow-guide.md` | Full pipeline overview, agent decision rules | Read if you need pipeline context |
+> | `../../references/01-shaping-process.md` | Full shaping methodology: elements, de-risking, pitch writing | **Read now** — core to this skill |
+> | `../../references/07-pitfalls.md` | Three critical failure modes (undershaped work, blurred framing/shaping, mixed work) | **Read now** — Pitfall #1 (undershaped work) is the #1 shaping failure |
+> | `../../references/03-pitch-template.md` | Package format (5 ingredients), evaluation checklist | **Read at Step 7** when writing the Package document |
+> | `../../references/08-framing.md` | Framing methodology, frame template | Read when validating the Frame Go status in Step 1 |
+> | `../../references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
+> | `../../references/02-building-process.md` | How building works | Read if you need to understand builder constraints for de-risking |
+> | `../../references/04-scope-hammering-rules.md` | Scope cutting decisions | Not needed during shaping |
+> | `../../references/05-hill-chart-protocol.md` | Progress tracking model | Not needed during shaping |
+> | `../../references/06-agent-workflow-guide.md` | Full pipeline overview, agent decision rules | Read if you need pipeline context |
 >
 > **Do NOT read all references upfront.** Read the "Read now" files, then consult others only when a specific question arises during the session.
 >
@@ -237,6 +238,18 @@ Build a binary matrix — every R must map to at least one solution element:
 - Every Element column should have at least one ✅. If a column is empty → the element may be unnecessary. Justify or remove.
 - ⚠️ cells indicate "partially covers, mechanism unknown" — these must be resolved in de-risking.
 
+<example>
+**Gap Resolution:**
+After building the matrix, R4 (Progress indicator) has no ✅ cells — no element covers it.
+
+Three options:
+1. Add an element: Design "Progress Updater" that wires to the Bulk Inserter's batch callback → R4 now has ✅
+2. Mark R4 as Out: "Progress indicator is nice-to-have, not core to the import workflow" → remove from matrix
+3. Merge: R4 is actually part of R2 (Preview) — the preview already shows row count, which serves as progress → mark ✅ in Preview column
+
+After any change, verify: every remaining R row still has ≥1 ✅. No gaps.
+</example>
+
 **Interactive**: Show the matrix to the user. "Does this coverage look right? Any gaps I'm missing?"
 
 ### Step 6: De-Risk (Zero TBDs, Zero ⚠️ Allowed)
@@ -248,28 +261,21 @@ Walk through each use case in slow motion. For every element, ask:
 3. Is there a design decision that could stall the builder?
 4. Can this be built within the appetite?
 
-**Resolve all ⚠️ flagged unknowns with Spikes:**
-Go back to Step 4 and find every element marked ⚠️. For each one, run a **Spike** —
-a focused, time-boxed investigation:
+**De-Risking Loop — for each ⚠️ flagged element:**
 
-1. **State the question**: What exactly is unknown? (e.g., "Can `BulkInsert` handle 10k rows?")
-2. **Investigate**: Read more code, grep for patterns, check test files, look at similar features
-3. **Conclude**: Either the mechanism becomes clear, or it doesn't
-   - If clear → update to ✅ with specific code references
-   - If too complex → apply one of three actions below
-4. **Record the spike outcome** in the Package's Rabbit Holes section
+1. **Spike** — investigate until the mechanism is clear:
+   1.1. State the exact question (e.g., "Can `BulkInsert` handle 10k rows?")
+   1.2. Investigate: read code, grep for patterns, check test files, look at similar features
+   1.3. Conclude: does the mechanism become clear?
+2. **If clear** → update element to ✅ with specific code references
+3. **If not clear** → choose ONE resolution action:
+   - **Declare Out of Bounds**: Use case not worth supporting in this appetite (e.g., "No custom domain support in v1")
+   - **Cut Back**: Feature not necessary for core value (e.g., remove optional UI elements)
+   - **Patch the Hole**: Make the hard decision now, not during build (e.g., "Use simple list instead of grouped tree view")
+4. **Record the outcome** in the Package's Rabbit Holes section
+5. **After all spikes are resolved** → re-run the Fit Check matrix. If you cut or changed elements, the matrix must still have full R coverage. If any R row lost its ✅, add a new element or mark R as Out.
 
-⚠️ elements CANNOT remain in the final Package. Every spike must conclude with ✅ or a cut/patch.
-
-**For each risk found, apply ONE of three actions:**
-
-| Action | When | Example |
-|--------|------|---------|
-| **Declare Out of Bounds** | Use case not worth supporting in this appetite | "No custom domain support in v1" |
-| **Cut Back** | Feature not necessary for core value | Remove optional UI elements |
-| **Patch the Hole** | Hard decision needed now, not during build | "Use simple list instead of grouped tree view" |
-
-**After de-risking, update the Fit Check matrix** — if you cut or changed elements, the matrix must still have full R coverage.
+Every ⚠️ must become ✅ or be resolved through step 3. No ⚠️ elements can remain in the final Package — unresolved unknowns detonate during build.
 
 **Validate**: Run the validation script:
 ```bash

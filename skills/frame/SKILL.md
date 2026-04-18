@@ -6,6 +6,7 @@ description: >
   pipeline. Frame before you shape. If the user says "we need X", "what about Y", or provides any raw idea,
   use /frame to lock the problem, identify affected users, quantify business value, and set the time appetite.
   This answers: "Is this worth investing shaping time in?"
+allowed-tools: Bash Read Write Edit Glob Grep
 ---
 
 # Shape Up: Frame
@@ -17,15 +18,15 @@ Framing investigates a raw idea to determine if the problem matters enough to in
 >
 > | File | Contains | When to read |
 > |------|----------|-------------|
-> | `references/08-framing.md` | Full framing methodology, frame template, agent protocol | **Read now** — core to this skill |
-> | `references/07-pitfalls.md` | Three critical failure modes (undershaped work, blurred framing/shaping, mixed work) | **Read now** — Pitfall #2 directly applies to framing |
-> | `references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
-> | `references/01-shaping-process.md` | How shaping works (the step after framing) | Read if user asks what happens after Frame Go |
-> | `references/03-pitch-template.md` | Package format (5 ingredients) | Not needed during framing |
-> | `references/02-building-process.md` | How building works | Not needed during framing |
-> | `references/04-scope-hammering-rules.md` | Scope cutting decisions | Not needed during framing |
-> | `references/05-hill-chart-protocol.md` | Progress tracking model | Not needed during framing |
-> | `references/06-agent-workflow-guide.md` | Full pipeline overview, agent decision rules | Read if you need pipeline context |
+> | `../../references/08-framing.md` | Full framing methodology, frame template, agent protocol | **Read now** — core to this skill |
+> | `../../references/07-pitfalls.md` | Three critical failure modes (undershaped work, blurred framing/shaping, mixed work) | **Read now** — Pitfall #2 directly applies to framing |
+> | `../../references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
+> | `../../references/01-shaping-process.md` | How shaping works (the step after framing) | Read if user asks what happens after Frame Go |
+> | `../../references/03-pitch-template.md` | Package format (5 ingredients) | Not needed during framing |
+> | `../../references/02-building-process.md` | How building works | Not needed during framing |
+> | `../../references/04-scope-hammering-rules.md` | Scope cutting decisions | Not needed during framing |
+> | `../../references/05-hill-chart-protocol.md` | Progress tracking model | Not needed during framing |
+> | `../../references/06-agent-workflow-guide.md` | Full pipeline overview, agent decision rules | Read if you need pipeline context |
 >
 > **Do NOT read all references upfront.** Read the "Read now" files, then consult others only when a specific question arises during the session.
 
@@ -86,9 +87,31 @@ do initial research:
 Use **AskUserQuestion** to guide the user through structured investigation. Don't ask all
 questions at once — adapt based on answers. Typical flow:
 
+**Handling solution proposals**: If the user jumps to solutions ("we should build X",
+"let's implement Y", "what if we add Z"), redirect to the problem:
+1. Acknowledge the idea: "That's a potential approach."
+2. Reframe: "Before we design solutions, let's lock down what problem it solves."
+3. Return to problem definition below.
+
+Framing and shaping are separate phases because combining them leads to solutions that
+sound good but solve the wrong problem. Establishing the problem first means shaping
+starts from validated pain, not assumptions.
+
 **Round 1 — Problem Definition** (1-2 questions):
 - "What's the actual pain point? What specific moment does the workflow break down?"
 - "What do users/customers do today as a workaround?" (establishes baseline)
+
+<example>
+User says: "We need a notification system for our app"
+
+Bad frame (jumped to solution): "Users need push notifications with configurable channels."
+This is a solution dressed as a problem — it skips the WHY entirely.
+
+Good frame (investigated problem): "Sales reps miss time-sensitive leads because they only
+check the dashboard twice a day. By the time they see a new lead, the prospect has gone cold.
+They lose ~2 deals/month. Workaround: some reps set browser tab auto-refresh every 5 minutes."
+This establishes the pain, frequency, impact, and baseline — solutions come later during /shape.
+</example>
 
 **Round 2 — Segment & Impact** (1-2 questions):
 - "Which users or customer segment is affected?" with options like:
@@ -191,8 +214,8 @@ user quotes, frequency of occurrence. If no hard data, state assumptions explici
 
 ## Anti-Patterns to Avoid
 
-- **Jumping to solutions**: If you notice yourself writing "we could build..." — STOP. You're framing, not shaping.
-- **Accepting grab-bags**: "Redesign the dashboard" is not a problem. Insist on one specific pain point.
-- **Skipping business value**: Every frame needs a reason the business should care. "It would be nice" is not enough.
-- **Vague appetite**: "Some sessions maybe" is not an appetite. Pick Small Batch, Medium Batch, or Big Batch.
-- **Not establishing baseline**: Without knowing what users do TODAY, you can't judge if a solution is an improvement.
+- **Jumping to solutions**: If you notice yourself writing "we could build..." — stop and refocus on the problem. Solutions designed before the problem is locked solve the wrong thing — shaping exists specifically to design solutions after framing validates the problem.
+- **Accepting grab-bags**: When users say "redesign X" or "X 2.0", ask: "Can we pick ONE specific pain point?" Grab-bags hide multiple problems with different appetites and affected segments, making scope impossible to control.
+- **Skipping business value**: Every frame needs a reason the business should care. Without it, the betting table has no basis for prioritization — "it would be nice" loses to anything with measurable impact.
+- **Vague appetite**: "Some sessions maybe" is not an appetite. Pick Small Batch, Medium Batch, or Big Batch. The appetite constrains the shape — without it, the shaper has no budget to design against.
+- **Not establishing baseline**: Without knowing what users do TODAY, you can't judge if a solution is an improvement. The baseline is the comparison point for shipping: "better than what exists" is the bar, not "perfect."

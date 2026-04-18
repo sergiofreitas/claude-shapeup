@@ -19,15 +19,15 @@ Building turns a shaped Package into deployed software within a fixed appetite.
 >
 > | File | Contains | When to read |
 > |------|----------|-------------|
-> | `references/02-building-process.md` | Full building methodology: orientation, vertical integration, scopes, shipping | **Read now** — core to this skill |
-> | `references/05-hill-chart-protocol.md` | Hill chart model, uphill/downhill phases, stuck scope protocol | **Read now** — needed for progress tracking |
-> | `references/04-scope-hammering-rules.md` | Scope cutting decision framework, must-have vs nice-to-have | **Read at Step 6** when capacity gets tight |
-> | `references/07-pitfalls.md` | Three critical failure modes | Read if scopes are stuck or work feels undershaped |
-> | `references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
-> | `references/01-shaping-process.md` | How shaping works | Read if the Package seems incomplete or unclear |
-> | `references/03-pitch-template.md` | Package format (5 ingredients) | Read if you need to interpret the Package structure |
-> | `references/06-agent-workflow-guide.md` | Full pipeline overview, agent decision rules | Read if reactive work conflicts with build |
-> | `references/08-framing.md` | Framing methodology | Not needed during building |
+> | `../../references/02-building-process.md` | Full building methodology: orientation, vertical integration, scopes, shipping | **Read now** — core to this skill |
+> | `../../references/05-hill-chart-protocol.md` | Hill chart model, uphill/downhill phases, stuck scope protocol | **Read now** — needed for progress tracking |
+> | `../../references/04-scope-hammering-rules.md` | Scope cutting decision framework, must-have vs nice-to-have | **Read at Step 6** when capacity gets tight |
+> | `../../references/07-pitfalls.md` | Three critical failure modes | Read if scopes are stuck or work feels undershaped |
+> | `../../references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
+> | `../../references/01-shaping-process.md` | How shaping works | Read if the Package seems incomplete or unclear |
+> | `../../references/03-pitch-template.md` | Package format (5 ingredients) | Read if you need to interpret the Package structure |
+> | `../../references/06-agent-workflow-guide.md` | Full pipeline overview, agent decision rules | Read if reactive work conflicts with build |
+> | `../../references/08-framing.md` | Framing methodology | Not needed during building |
 >
 > **Do NOT read all references upfront.** Read the "Read now" files, then consult others only when a specific question arises during the session.
 

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/hooks/build-guard.sh\"",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/hooks/phase-guard.sh\"",
             "timeout": 5
           }
         ]
