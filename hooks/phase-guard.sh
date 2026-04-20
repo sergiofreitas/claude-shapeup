@@ -1,26 +1,33 @@
 #!/bin/bash
-# phase-guard.sh — UserPromptSubmit hook enforcing phase transition gates
+# phase-guard.sh — UserPromptSubmit hook enforcing phase transition gates.
 # Deterministically blocks skill invocations when prerequisites aren't met.
+#
+# Feature keys accepted by /shape, /build, /ship:
+#   - Full date-slug:   2026-04-20-csv-import
+#   - With disambig:    2026-04-20-csv-import-bc89
+#   - Short slug:       csv-import (fails if multiple features share the slug)
+#   - Legacy NNN:       001 / 042 / 42  (back-compat; resolves to the single folder)
 
 INPUT=$(cat)
 PROMPT=$(echo "$INPUT" | jq -r '.prompt // empty')
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-.}"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RESOLVER="$HOOKS_DIR/lib/resolve-feature.sh"
 
-# Only process Shape Up skill invocations
-# Extract command and feature number
 COMMAND=""
-NNN=""
+KEY=""
 
-if [[ "$PROMPT" =~ ^/shape[[:space:]]+([0-9]+) ]]; then
+# Accept /<skill>, /shapeup:<skill>, or legacy /<skill>. Key = first non-space arg.
+if [[ "$PROMPT" =~ ^/(shapeup:)?shape[[:space:]]+([^[:space:]]+) ]]; then
   COMMAND="shape"
-  NNN="${BASH_REMATCH[1]}"
-elif [[ "$PROMPT" =~ ^/build[[:space:]]+([0-9]+) ]]; then
+  KEY="${BASH_REMATCH[2]}"
+elif [[ "$PROMPT" =~ ^/(shapeup:)?build[[:space:]]+([^[:space:]]+) ]]; then
   COMMAND="build"
-  NNN="${BASH_REMATCH[1]}"
-elif [[ "$PROMPT" =~ ^/ship[[:space:]]+([0-9]+) ]]; then
+  KEY="${BASH_REMATCH[2]}"
+elif [[ "$PROMPT" =~ ^/(shapeup:)?ship[[:space:]]+([^[:space:]]+) ]]; then
   COMMAND="ship"
-  NNN="${BASH_REMATCH[1]}"
+  KEY="${BASH_REMATCH[2]}"
 else
   exit 0
 fi
@@ -30,63 +37,74 @@ if [ ! -d "$SHAPEUP_DIR" ]; then
   exit 0
 fi
 
-# Find the feature folder
-FEATURE_DIR=$(ls -d "$SHAPEUP_DIR"/${NNN}-* 2>/dev/null | head -1)
-if [ -z "$FEATURE_DIR" ]; then
+# Resolve feature key → folder path
+if [ ! -x "$RESOLVER" ]; then
   exit 0
 fi
 
+RESOLVED=$("$RESOLVER" "$SHAPEUP_DIR" "$KEY" 2>/tmp/phase-guard-resolver.err)
+RESOLVE_STATUS=$?
+
+if [ "$RESOLVE_STATUS" = "2" ]; then
+  # Ambiguous — surface the resolver's message, block the invocation.
+  cat /tmp/phase-guard-resolver.err >&2
+  rm -f /tmp/phase-guard-resolver.err
+  exit 2
+fi
+
+rm -f /tmp/phase-guard-resolver.err
+
+if [ "$RESOLVE_STATUS" != "0" ] || [ -z "$RESOLVED" ]; then
+  # No match — let the skill handle the "feature not found" case itself.
+  exit 0
+fi
+
+FEATURE_DIR="$RESOLVED"
+
 case "$COMMAND" in
   shape)
-    # Gate: frame.md must exist with Frame Go
     FRAME="$FEATURE_DIR/frame.md"
     if [ ! -f "$FRAME" ]; then
-      echo "Feature $NNN has no frame document. Run /frame first." >&2
+      echo "Feature '$KEY' has no frame document. Run /frame first." >&2
       exit 2
     fi
     if ! grep -q "Frame Go" "$FRAME" 2>/dev/null; then
-      echo "Feature $NNN hasn't been approved for shaping. Run /frame to complete framing and get Frame Go approval." >&2
+      echo "Feature '$KEY' hasn't been approved for shaping. Run /frame to complete framing and get Frame Go approval." >&2
       exit 2
     fi
-    # Check if already shaped or beyond
     if [[ "$FEATURE_DIR" == *-shaped ]] || [[ "$FEATURE_DIR" == *-building ]] || [[ "$FEATURE_DIR" == *-shipped ]]; then
-      echo "Feature $NNN is already shaped. Run /build $NNN to build it." >&2
+      echo "Feature '$KEY' is already shaped. Run /build $KEY to build it." >&2
       exit 2
     fi
     ;;
 
   build)
-    # Gate: already shipped
     if [[ "$FEATURE_DIR" == *-shipped ]]; then
-      echo "Feature $NNN is already shipped. To iterate, frame a new feature." >&2
+      echo "Feature '$KEY' is already shipped. To iterate, frame a new feature." >&2
       exit 2
     fi
-    # Gate: build already complete
     if [ -f "$FEATURE_DIR/build-summary.md" ]; then
-      echo "Build for feature $NNN is complete. Run /ship $NNN to archive and document decisions." >&2
+      echo "Build for feature '$KEY' is complete. Run /ship $KEY to archive and document decisions." >&2
       exit 2
     fi
-    # Gate: package.md must exist with Shape Go
     PACKAGE="$FEATURE_DIR/package.md"
     if [ ! -f "$PACKAGE" ]; then
-      echo "Feature $NNN has no package. Run /shape $NNN first." >&2
+      echo "Feature '$KEY' has no package. Run /shape $KEY first." >&2
       exit 2
     fi
     if ! grep -q "Shape Go" "$PACKAGE" 2>/dev/null; then
-      echo "Feature $NNN hasn't been approved for building. Run /shape $NNN to complete shaping and get Shape Go approval." >&2
+      echo "Feature '$KEY' hasn't been approved for building. Run /shape $KEY to complete shaping and get Shape Go approval." >&2
       exit 2
     fi
     ;;
 
   ship)
-    # Gate: already shipped
     if [[ "$FEATURE_DIR" == *-shipped ]]; then
-      echo "Feature $NNN is already shipped." >&2
+      echo "Feature '$KEY' is already shipped." >&2
       exit 2
     fi
-    # Gate: build-summary.md must exist
     if [ ! -f "$FEATURE_DIR/build-summary.md" ]; then
-      echo "Feature $NNN hasn't completed building. Run /build $NNN first." >&2
+      echo "Feature '$KEY' hasn't completed building. Run /build $KEY first." >&2
       exit 2
     fi
     ;;

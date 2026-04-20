@@ -16,7 +16,10 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 FIXTURES_DIR="$SCRIPT_DIR/fixtures"
-RESULTS_DIR="$SCRIPT_DIR/results"
+# RESULTS_DIR can be overridden via env var. This lets diff-against-baseline.sh
+# generate into a scratch directory without clobbering the committed baselines
+# at tests/results/.
+RESULTS_DIR="${GENERATE_RESULTS_DIR:-$SCRIPT_DIR/results}"
 BUILD_SKILL="$PROJECT_ROOT/skills/build/SKILL.md"
 
 # Colors

@@ -56,22 +56,88 @@ handles token generation via `createToken()` on line 45; we'd extend it with a `
 
 ---
 
+## Paths and Variables
+
+Every bash snippet below assumes these shell variables are set at the **start of the
+snippet**. Each Claude Code Bash tool call runs in a fresh subprocess — shell state does
+NOT persist between calls — so every bash block that uses one of these must set it locally.
+
+- **`<project-root>`**: the user's working repository, where `.shapeup/` lives.
+  Resolves to `"${CLAUDE_PROJECT_DIR:-$(pwd)}"`.
+- **`<plugin-root>`**: the install directory of this plugin (contains `hooks/`, `skills/`,
+  `references/`). Resolves to `"${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"`.
+- **`<skill-dir>`**: this skill's directory, equal to `$PLUGIN_ROOT/skills/shape`.
+- **`<feature-dir>`** / **`$FEATURE_DIR`**: the resolved feature folder. Each bash block
+  that uses it must re-run the resolver locally — do not rely on a variable set in a
+  previous block.
+- **`<KEY>`** / **`$KEY`**: the feature key the user typed (date-slug, short slug, or
+  legacy NNN).
+
+Standard bash prelude — paste at the top of any snippet that needs these:
+
+```bash
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SKILL_DIR="$PLUGIN_ROOT/skills/shape"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+KEY="<feature key the user typed>"
+FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+```
+
+---
+
 ## Process
+
+### Step 0: Verify Prior State (Trust but Verify)
+
+Before you read the Frame and start designing, **dispatch a subagent to audit what the
+framing claimed**. Agents who skip this step re-shape already-shaped features or propose
+solutions that contradict decisions already recorded.
+
+1. Resolve the feature folder from the user's key (set `KEY` to whatever the user typed):
+   ```bash
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   echo "$FEATURE_DIR"
+   ```
+   `<KEY>` is a full date-slug (`2026-04-20-csv-import`), a short slug (`csv-import`), or
+   a legacy NNN (`001`). If the resolver prints no path or exits with status 2
+   (ambiguous), tell the user which key form they need. Remember: the `$FEATURE_DIR`
+   captured here does NOT persist into the next bash block — each subsequent snippet
+   re-runs the prelude.
+
+2. Dispatch an **Explore subagent** to read the feature folder and the codebase and
+   report back:
+   - Does `frame.md` exist, and what status does it carry (`Framing`, `Frame Go`,
+     `Rejected`)?
+   - Does `package.md` already exist? If yes, has shaping already started or completed?
+     In that case the user wants to **resume** shaping, not restart it — the subagent
+     must list which sections are filled, which still have `TBD`/`⚠️`, which elements are
+     marked ❌ or missing fit-check coverage.
+   - Do any referenced files (codebase modules named in the frame) still exist? Flag any
+     references that are now stale.
+
+3. Apply the audit:
+   - If the Frame hasn't been Frame-Go approved → **STOP** and tell the user to run `/frame`.
+   - If the Package is already `Shape Go` → **STOP** and tell the user to run `/build`.
+   - If a partial Package exists → resume from where shaping left off; do NOT restart.
+     Update the TodoWrite to reflect only the remaining work.
+   - If stale code references were flagged → add them to the list of unknowns to resolve in
+     Step 6 (De-Risk).
 
 ### Step 1: Load and Validate Frame
 
-1. Parse the feature ID from the user's input (e.g., "001", "002")
-2. Find the feature folder in `.shapeup/`:
-   ```bash
-   ls -d <project-root>/.shapeup/<NNN>-*
-   ```
-3. Read `frame.md` from the folder
-4. **Validate Frame Go**: Check that `frame.md` contains `Status: Frame Go`.
+1. Read `frame.md` from the feature folder resolved in Step 0.
+2. **Validate Frame Go**: Check that `frame.md` contains `Status: Frame Go`.
    If not approved, tell the user: "This frame hasn't been approved yet. Run `/frame` to complete framing first."
    STOP — do not proceed without Frame Go.
-5. Extract: problem statement, affected segment, appetite, business value
+3. Extract: problem statement, affected segment, appetite, business value
 
-6. Set up TodoWrite to track progress:
+4. Set up TodoWrite to track progress:
+   - Verifying prior state (subagent audit)
    - Loading frame and validating approval
    - Extracting requirements (R)
    - Analyzing codebase (technical depth)
@@ -279,13 +345,19 @@ Every ⚠️ must become ✅ or be resolved through step 3. No ⚠️ elements c
 
 **Validate**: Run the validation script:
 ```bash
-bash <skill-dir>/scripts/validate-package.sh <path-to-package.md>
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SKILL_DIR="$PLUGIN_ROOT/skills/shape"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+KEY="<feature key the user typed>"
+FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+bash "$SKILL_DIR/scripts/validate-package.sh" "$FEATURE_DIR/package.md"
 ```
 If any TBD/TODO/FIXME strings remain, resolve them before proceeding.
 
 ### Step 7: Produce Package Document
 
-Write the Package to `.shapeup/<NNN-slug-framing>/package.md`.
+Write the Package to `<feature-dir>/package.md` — using the `$FEATURE_DIR` resolved in Step 0.
 
 **Choose the template based on appetite.** Medium Batch (2-3 sessions) uses the Big Batch template.
 
@@ -453,14 +525,31 @@ For Big Batch features, use the full template with affordance tables and fit che
      - "Discard — Not feasible within appetite"
 
 3. Based on response:
-   - **Shape Go**: Update `package.md` status to `Status: Shape Go — approved <date>`.
-     Rename folder:
+   - **Shape Go**: Before renaming, validate the package is clean:
      ```bash
-     # Change status suffix from -framing to -shaped
-     CURRENT=$(ls -d <project-root>/.shapeup/<NNN>-*-framing)
-     NEW=$(echo "$CURRENT" | sed 's/-framing$/-shaped/')
-     mv "$CURRENT" "$NEW"
+     PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+     PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+     SKILL_DIR="$PLUGIN_ROOT/skills/shape"
+     SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+     KEY="<feature key the user typed>"
+     FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+     bash "$SKILL_DIR/scripts/validate-package.sh" "$FEATURE_DIR/package.md"
      ```
+     If the script exits non-zero, resolve every reported issue and re-run. Do not rename
+     the folder until the validation passes.
+
+     Then update `package.md` status to `Status: Shape Go — approved <date>` and rename:
+     ```bash
+     PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+     PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+     SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+     KEY="<feature key the user typed>"
+     FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+     NEW=$(echo "$FEATURE_DIR" | sed 's/-framing$/-shaped/')
+     mv "$FEATURE_DIR" "$NEW"
+     ```
+     (The folder key uses date-slug naming — `2026-04-20-csv-import-framing` becomes
+     `2026-04-20-csv-import-shaped`. Legacy numeric folders work the same way.)
    - **Needs more work**: Address specific concerns, update package, re-present
    - **Back to framing**: Note findings, suggest reframing direction
    - **Discard**: Rename to `-discarded`, write `discard-reason.md`

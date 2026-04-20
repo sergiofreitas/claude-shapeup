@@ -113,6 +113,45 @@ run_guard "/ship 001" "$TMPDIR" && fail "should block /ship on shipped" || pass 
 rm -rf "$TMPDIR"
 
 echo ""
+echo "=== Phase Guard: date-slug keys ==="
+
+# /shape on date-slug key with Frame Go
+TMPDIR=$(mktemp -d)
+mkdir -p "$TMPDIR/.shapeup/2026-04-20-csv-import-framing"
+echo "Status: Frame Go — approved 2026-04-20" > "$TMPDIR/.shapeup/2026-04-20-csv-import-framing/frame.md"
+run_guard "/shape 2026-04-20-csv-import" "$TMPDIR" && pass "/shape allowed with date-slug key + Frame Go" || fail "should allow /shape with date-slug key"
+rm -rf "$TMPDIR"
+
+# /build on short-slug key (unambiguous)
+TMPDIR=$(mktemp -d)
+mkdir -p "$TMPDIR/.shapeup/2026-04-20-csv-import-shaped"
+echo "Status: Shape Go" > "$TMPDIR/.shapeup/2026-04-20-csv-import-shaped/package.md"
+run_guard "/build csv-import" "$TMPDIR" && pass "/build allowed with short slug + Shape Go" || fail "should allow /build with short slug"
+rm -rf "$TMPDIR"
+
+# /build on short slug that's ambiguous (two matching folders)
+TMPDIR=$(mktemp -d)
+mkdir -p "$TMPDIR/.shapeup/2026-04-20-csv-import-shaped"
+mkdir -p "$TMPDIR/.shapeup/2026-04-19-csv-import-building"
+echo "Status: Shape Go" > "$TMPDIR/.shapeup/2026-04-20-csv-import-shaped/package.md"
+run_guard "/build csv-import" "$TMPDIR" && fail "should block ambiguous short-slug /build" || pass "/build blocked when short slug matches multiple features"
+rm -rf "$TMPDIR"
+
+# /shapeup:<skill> form
+TMPDIR=$(mktemp -d)
+mkdir -p "$TMPDIR/.shapeup/2026-04-20-csv-import-shaped"
+echo "Status: Shape Go" > "$TMPDIR/.shapeup/2026-04-20-csv-import-shaped/package.md"
+run_guard "/shapeup:build 2026-04-20-csv-import" "$TMPDIR" && pass "/shapeup:build accepted as well as /build" || fail "should accept /shapeup:<skill> form"
+rm -rf "$TMPDIR"
+
+# Legacy zero-padded NNN with octal-trap value (042)
+TMPDIR=$(mktemp -d)
+mkdir -p "$TMPDIR/.shapeup/042-legacy-shaped"
+echo "Status: Shape Go" > "$TMPDIR/.shapeup/042-legacy-shaped/package.md"
+run_guard "/build 042" "$TMPDIR" && pass "/build accepts legacy 042 without octal misparse" || fail "should not octal-parse 042"
+rm -rf "$TMPDIR"
+
+echo ""
 echo "=== Phase Guard: passthrough ==="
 
 # non-shapeup commands pass through

@@ -34,26 +34,51 @@ Type `/shapeup:frame` and follow the conversation.
 
 ```
 .shapeup/
-├── 001-csv-import-framing/       # Active: being framed
+├── 2026-04-20-csv-import-framing/       # Active: being framed
 │   └── frame.md
-├── 002-auth-refresh-shaped/      # Ready: waiting for a build bet
+├── 2026-04-18-auth-refresh-shaped/      # Ready: waiting for a build bet
 │   ├── frame.md
 │   └── package.md
-├── 003-dashboard-v2-building/    # In progress
+├── 2026-04-15-dashboard-v2-building/    # In progress
 │   ├── frame.md
 │   ├── package.md
 │   ├── hillchart.md
 │   ├── scopes/
 │   └── handover-01.md
-├── 004-search-shipped/           # Done: decisions archived
-└── index.md                      # Auto-generated dashboard
+├── 2026-04-10-search-shipped/           # Done: decisions archived
+└── index.md                             # Auto-generated dashboard
 ```
 
-Multiple features can run in parallel. Each one is a numbered folder with a status suffix.
+Multiple features can run in parallel. Each folder is a date-slug key — `YYYY-MM-DD-<slug>` —
+with a status suffix (`-framing`, `-shaped`, `-building`, `-shipped`, `-discarded`). Date-slug
+keys are **collision-free across teammates**: two developers can frame features on separate
+branches without colliding on a shared counter. If two teammates pick the same slug on the
+same day, the second folder gets a 4-hex disambiguator (`2026-04-20-csv-import-bc89-framing`).
 
-## The Ripple-Check Hook
+Invoke downstream skills with any of these key forms:
 
-A PostToolUse hook that watches `.shapeup/**/*.md` edits. When the agent modifies `frame.md`, it gets a nudge: "Does the package still match?" When `package.md` changes: "Do the scopes still align?" Advisory only — it reminds, never blocks.
+- Full date-slug: `/shapeup:build 2026-04-20-csv-import`
+- Short slug: `/shapeup:build csv-import` (works when the slug is unique across the project)
+- Legacy numeric: `/shapeup:build 001` (back-compat for features created before date-slug)
+
+## Hooks
+
+The plugin installs two hooks:
+
+- **`phase-guard.sh`** (UserPromptSubmit) — blocks `/shape`, `/build`, `/ship` when gates
+  haven't been passed. Resolves any accepted key form to the correct feature folder and
+  verifies Frame Go / Shape Go / `build-summary.md` exists.
+- **`ripple-check.sh`** (PostToolUse) — watches `.shapeup/**/*.md` edits and nudges the
+  agent when a change to one document likely affects another. Advisory only.
+
+## Verification Scripts
+
+Two shared scripts back the "trust but verify" pattern that shape/build/ship use:
+
+- **`hooks/lib/resolve-feature.sh`** — accepts any key form, returns the feature folder path.
+- **`hooks/lib/check-consistency.sh`** — audits a feature folder for drift between scope
+  checkboxes, hill chart symbols, and the pre-ship gate. Skills call it before marking a
+  scope done and as the gate into `/ship`; FAILs must be resolved, not silenced.
 
 ## Project Structure
 
@@ -62,7 +87,12 @@ A PostToolUse hook that watches `.shapeup/**/*.md` edits. When the agent modifie
 ├── plugin.json
 └── marketplace.json
 hooks/
-└── ripple-check.sh
+├── hooks.json
+├── phase-guard.sh
+├── ripple-check.sh
+└── lib/
+    ├── resolve-feature.sh
+    └── check-consistency.sh
 skills/
 ├── frame/
 │   ├── SKILL.md
@@ -99,3 +129,5 @@ MIT
 ## Contributing
 
 Fork it, break it, make it yours. Each skill's `references/` directory is self-contained — swap in your own methodology docs, add domain-specific references, or build new skills for phases we skipped (a `/shapeup:bet` skill for the betting table, anyone?).
+
+**Before editing a SKILL.md or a hook, read [CONTRIBUTING.md](./CONTRIBUTING.md).** It covers the three-layer test suite (unit / structural-snapshot / behavioral) and the prompt-change workflow (`tests/diff-against-baseline.sh`) that keeps prompt edits from silently drifting the generated artifacts.

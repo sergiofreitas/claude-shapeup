@@ -1,2 +1,7 @@
 .DS_Store
 .fuse_hidden*
+
+# LLM-as-judge outputs — ephemeral, regenerated on each behavioral test run.
+# The structural results/ directory IS committed as golden-file baselines (see
+# CONTRIBUTING.md § "Prompt-change workflow"). Only the judge JSONs are ignored.
+tests/behavioral/results/

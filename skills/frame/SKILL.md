@@ -49,6 +49,31 @@ stop and refocus on the problem. Framing answers "WHAT problem?" and "WHY now?" 
 
 ---
 
+## Paths and Variables
+
+Every bash snippet below assumes these shell variables are set at the **start of the
+snippet**. Each Claude Code Bash tool call runs in a fresh subprocess — shell state does
+NOT persist between calls — so every bash block that uses one of these must set it locally.
+
+- **`<project-root>`**: the user's working repository, where `.shapeup/` lives.
+  Resolves to `"${CLAUDE_PROJECT_DIR:-$(pwd)}"`.
+- **`<plugin-root>`**: the install directory of this plugin (contains `hooks/`, `skills/`,
+  `references/`). Resolves to `"${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"`.
+- **`<skill-dir>`**: this skill's directory, equal to `$PLUGIN_ROOT/skills/frame`.
+- **`<KEY>`** / **`$KEY`**: the feature key the user typed (date-slug, short slug, or
+  legacy NNN).
+
+Standard bash prelude — paste at the top of any snippet that needs these:
+
+```bash
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SKILL_DIR="$PLUGIN_ROOT/skills/frame"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+```
+
+---
+
 ## Process
 
 ### Step 1: Initialize
@@ -56,14 +81,26 @@ stop and refocus on the problem. Framing answers "WHAT problem?" and "WHY now?" 
 1. Identify the project workspace root (the folder the user selected or is working in)
 2. Check if `.shapeup/` exists at the project root; create it if needed:
    ```bash
-   mkdir -p <project-root>/.shapeup
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   mkdir -p "$PROJECT_ROOT/.shapeup"
    ```
-3. Determine the next feature number by running:
+3. Create the feature folder by running:
    ```bash
-   bash <skill-dir>/scripts/init-feature.sh <project-root>/.shapeup "<preliminary-slug>"
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SKILL_DIR="$PLUGIN_ROOT/skills/frame"
+   bash "$SKILL_DIR/scripts/init-feature.sh" "$PROJECT_ROOT/.shapeup" "<preliminary-slug>"
    ```
    This creates the folder and returns its path. The slug should be a 2-4 word kebab-case
    summary of the idea (e.g., "user-auth", "notification-system", "csv-export").
+
+   **Naming scheme**: `YYYY-MM-DD-<slug>-framing` (e.g. `2026-04-20-csv-import-framing`).
+   Date-slug keys are collision-free when multiple teammates frame on separate branches;
+   the legacy `NNN-<slug>-<status>` scheme caused merge conflicts on the number prefix.
+   If a teammate already created a folder with the same date+slug, the script appends a
+   4-char hex disambiguator (`2026-04-20-csv-import-bc89-framing`) so the new folder is
+   unique. Downstream commands (`/shape`, `/build`, `/ship`) accept the full date-slug
+   key, a short slug (unambiguous case only), or a legacy NNN.
 
 4. Set up TodoWrite to track progress:
    - Investigating problem
@@ -143,7 +180,8 @@ problem, challenge it. Use AskUserQuestion:
 
 ### Step 4: Produce Frame Document
 
-Write the Frame document to `.shapeup/<NNN-slug-framing>/frame.md`:
+Write the Frame document to `.shapeup/<feature-folder>/frame.md` (where `<feature-folder>`
+is the date-slug path returned by `init-feature.sh`, e.g. `2026-04-20-csv-import-framing`):
 
 ```markdown
 # Frame: <Short Name>
@@ -198,17 +236,16 @@ user quotes, frequency of occurrence. If no hard data, state assumptions explici
      - "Discard — Problem isn't real or valuable" (discard)
 
 3. Based on response:
-   - **Frame Go**: Update `frame.md` status to `Status: Frame Go`. Rename folder:
-     ```bash
-     mv <project-root>/.shapeup/NNN-slug-framing <project-root>/.shapeup/NNN-slug-framing
-     ```
-     (Status stays `-framing` until `/shape` picks it up and renames to `-shaped`)
-     Update frame.md status line to `Status: Frame Go — approved <date>`
+   - **Frame Go**: Update `frame.md` status line to `Status: Frame Go — approved <date>`.
+     The folder stays at `-framing` until `/shape` picks it up and renames it to `-shaped`.
    - **Needs refinement**: Go back to the relevant Q&A step, update frame.md
    - **Reject**: Update status to `Status: Rejected — <reason>`. Leave folder as-is.
-   - **Discard**: Rename folder to `NNN-slug-discarded`, write `discard-reason.md`
+   - **Discard**: Rename folder by replacing the `-framing` suffix with `-discarded`
+     (e.g. `2026-04-20-csv-import-framing` → `2026-04-20-csv-import-discarded`), and
+     write `discard-reason.md` inside it.
 
-4. Tell the user: "When ready to design a solution, run `/shape <NNN>`"
+4. Tell the user: "When ready to design a solution, run `/shape <KEY>`" — where `<KEY>`
+   is the date-slug (or short slug, if unambiguous).
 
 ---
 

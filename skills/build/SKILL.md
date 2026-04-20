@@ -55,44 +55,134 @@ Your job:
 
 ---
 
+## Paths and Variables
+
+Every bash snippet below assumes these shell variables are set at the **start of the
+snippet**. Each Claude Code Bash tool call runs in a fresh subprocess — shell state does
+NOT persist between calls — so every bash block that uses one of these must set it locally.
+
+- **`<project-root>`**: the user's working repository, where `.shapeup/` lives.
+  Resolves to `"${CLAUDE_PROJECT_DIR:-$(pwd)}"`.
+- **`<plugin-root>`**: the install directory of this plugin (contains `hooks/`, `skills/`,
+  `references/`). Resolves to `"${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"`.
+- **`<skill-dir>`**: this skill's directory, equal to `$PLUGIN_ROOT/skills/build`.
+- **`<feature-dir>`** / **`$FEATURE_DIR`**: the resolved feature folder. Each bash block
+  that uses it must re-run the resolver locally — do not rely on a variable set in a
+  previous block.
+- **`<KEY>`** / **`$KEY`**: the feature key the user typed (date-slug, short slug, or
+  legacy NNN).
+
+Standard bash prelude — paste at the top of any snippet that needs these:
+
+```bash
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SKILL_DIR="$PLUGIN_ROOT/skills/build"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+KEY="<feature key the user typed>"
+FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+```
+
+---
+
 ## Process
 
 ### Step 0: Determine Session Type
 
-First, check if this feature has already been completed or shipped:
+Resolve the feature folder from the user's key (full date-slug, short slug, or legacy NNN):
 
 ```bash
-# Check if already shipped
-ls -d <project-root>/.shapeup/<NNN>-*-shipped 2>/dev/null
-
-# Check if build is already complete
-cat <project-root>/.shapeup/<NNN>-*/build-summary.md 2>/dev/null
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+KEY="<feature key the user typed>"
+FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+echo "$FEATURE_DIR"
 ```
 
-- **Folder ends in `-shipped`** → STOP. Tell user: "Feature <NNN> is already shipped. To iterate, frame a new feature."
-- **`build-summary.md` exists** → STOP. Tell user: "Build is complete. Run `/ship <NNN>` to archive and document decisions."
+If the resolver returns nothing or exits 2 (ambiguous), tell the user which key form to use.
+
+Check whether the feature is already completed or shipped:
+
+- **Folder ends in `-shipped`** → STOP. Tell user: "Feature <KEY> is already shipped. To iterate, frame a new feature."
+- **`build-summary.md` exists** → STOP. Tell user: "Build is complete. Run `/ship <KEY>` to archive and document decisions."
 
 Then, check if this is a **first session** or a **continuation**:
 
 ```bash
-# Check for existing handover files
-ls <project-root>/.shapeup/<NNN>-*/{handover-*.md,hillchart.md} 2>/dev/null
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+KEY="<feature key the user typed>"
+FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+ls "$FEATURE_DIR"/{handover-*.md,hillchart.md} 2>/dev/null
 ```
 
-- **No handover exists** → First session. Start at Step 1 (Orient).
-- **Handover exists** → Continuation. Start at Step 5 (Resume from Handover).
+- **No handover exists** → First session. Go to Step 0.5 (Verify Prior State).
+- **Handover exists** → Continuation. Go to Step 0.5 (Verify Prior State), then Step 5 (Resume from Handover).
+
+### Step 0.5: Verify Prior State (Trust but Verify)
+
+Before writing code, **dispatch an Explore subagent** to audit what the prior sessions and
+tracking artifacts claim. Agents who skip this step treat a stale hill chart as ground truth,
+repeat work that was already done, or push through scopes that were already cut.
+
+The subagent's job is to answer, with file_path:line_number citations:
+
+1. **Scope checkbox vs reality** — For every scope file in `<FEATURE_DIR>/scopes/`:
+   - List each must-have task, whether it's `[x]`/`[ ]`, and whether the code actually
+     implements it (greppable function, committed test, or visible UI affordance).
+   - Flag any task marked `[x]` where the subagent cannot find supporting code or tests
+     ("claimed done but no evidence").
+   - Flag any task marked `[ ]` where the subagent finds clear evidence it's already
+     implemented ("done on disk but still unchecked").
+
+2. **Hill chart vs scope files** — For each scope in `hillchart.md`, does its hill position
+   (▲ / ▼ / ✓) match the scope file's `## Hill Position` line? Flag any disagreement.
+
+3. **Handover vs state** — If handovers exist, does the latest handover's "Next Session
+   Should" list still match what's unfinished? If scopes have moved since the handover,
+   the handover is stale.
+
+4. **Package vs scopes** — Do the package's elements and fit-check requirements correspond
+   to at least one existing scope, or are some R rows orphaned?
+
+**Apply the audit before starting work:**
+
+- If the subagent reports "claimed done but no evidence" → flip the checkbox back to `[ ]`
+  in the scope file and add a note explaining why. Update the hill chart to match.
+- If the subagent reports "done on disk but still unchecked" → tick the checkbox `[x]` and
+  update the hill chart position. This is regular tracking hygiene, not scope creep.
+- If the subagent reports hill chart / scope disagreement → pick the source of truth (usually
+  the scope file) and fix the hill chart.
+- Sanity-check your fixes with the consistency check. Every FAIL must be resolved (or
+  explicitly explained in the handover) before continuing:
+  ```bash
+  PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+  PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+  SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+  KEY="<feature key the user typed>"
+  FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+  bash "$PLUGIN_ROOT/hooks/lib/check-consistency.sh" "$FEATURE_DIR" audit
+  ```
+
+Only after the audit and any corrections are applied do you resume or start work.
 
 ### Step 1: Orient (First Session Only)
 
-1. **Load Package**: Find and read `.shapeup/<NNN>-*-shaped/package.md`
+1. **Load Package**: Read `package.md` from the `$FEATURE_DIR` you resolved in Step 0.
    - Validate `Status: Shape Go` exists. If not, tell user to run `/shape` first.
    - Extract: problem, appetite, elements, rabbit holes, no-gos
 
 2. **Rename folder to building**:
    ```bash
-   CURRENT=$(ls -d <project-root>/.shapeup/<NNN>-*-shaped)
-   NEW=$(echo "$CURRENT" | sed 's/-shaped$/-building/')
-   mv "$CURRENT" "$NEW"
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   NEW=$(echo "$FEATURE_DIR" | sed 's/-shaped$/-building/')
+   mv "$FEATURE_DIR" "$NEW"
    ```
 
 3. **Study the codebase**: Read the files mentioned in the Package's elements.
@@ -107,7 +197,13 @@ ls <project-root>/.shapeup/<NNN>-*/{handover-*.md,hillchart.md} 2>/dev/null
 
 5. **Create initial hill chart**:
    ```bash
-   bash <skill-dir>/scripts/update-hillchart.sh <feature-dir>/hillchart.md init
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SKILL_DIR="$PLUGIN_ROOT/skills/build"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   bash "$SKILL_DIR/scripts/update-hillchart.sh" "$FEATURE_DIR/hillchart.md" init
    ```
 
 6. **Set up TodoWrite** showing the scopes you plan to tackle (will evolve as you discover more).
@@ -163,10 +259,8 @@ After the first piece, scopes emerge from real work:
 
 1. **Capture tasks as you discover them** — don't pre-plan everything
 2. **Group related tasks into scopes** — independent, finishable units
-3. **Create scope files**:
-   ```
-   <feature-dir>/scopes/scope-<name>.md
-   ```
+3. **Create scope files** at `$FEATURE_DIR/scopes/scope-<name>.md` (where `$FEATURE_DIR`
+   is resolved per the standard prelude):
    Each scope file:
    ```markdown
    # Scope: <Name>
@@ -251,9 +345,34 @@ C. Tests pass
 D. Browser verification (web projects)
 E. Update hill chart position
 F. Commit changes with meaningful message
-G. Mark scope tasks as done in scope file
-H. Update TodoWrite
+G. Mark scope tasks as done in scope file — tick `[x]` for every must-have that just
+   landed; leave `[ ]` for anything still pending. If you finished a nice-to-have, tick
+   its `[ ]` too. If a task was cut during this step, move it under a `## Cut` heading
+   or prefix it with `~` — do NOT silently delete it.
+H. Update the scope file's `## Hill Position` line to match the new reality (▲ → ▼ → ✓)
+I. Update `hillchart.md` so its symbol for this scope matches the scope file
+J. Update TodoWrite
+K. Run the consistency check as a self-audit (see "Self-audit invocation" below).
+   Resolve every FAIL before moving to the next scope. FAILs at this point mean your
+   tracking artifacts disagree with each other — fix them now, not at ship time.
 ```
+
+**Self-audit invocation** (use after each scope's substep K):
+
+```bash
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+KEY="<feature key the user typed>"
+FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+bash "$PLUGIN_ROOT/hooks/lib/check-consistency.sh" "$FEATURE_DIR" audit
+```
+
+**Tracking-update rule (non-negotiable):** any time you finish a task, cut a task, or
+change a hill position, you MUST update the three artifacts that describe it — the scope
+file's checkbox, the scope file's `## Hill Position`, and `hillchart.md` — in the same
+action. Agents that "batch" tracking updates at the end of a session routinely forget
+items and ship with stale documentation.
 
 **Continuous scope hammering** — for every new task that surfaces:
 - Is it a must-have? If not → mark with `~`
@@ -265,10 +384,13 @@ H. Update TodoWrite
 
 If this is NOT the first session:
 
-1. Read the latest `handover-NN.md` from the feature folder
-2. Read `hillchart.md` for current state
-3. Read scope files for task status
-4. Pick up where the last session left off:
+1. You already ran the Step 0.5 subagent audit. Treat its findings as authoritative —
+   the scope files and hill chart you're about to read may contain drift that the audit
+   already corrected (or flagged for you to correct now).
+2. Read the latest `handover-NN.md` from the feature folder
+3. Read `hillchart.md` for current state (corrected per Step 0.5)
+4. Read scope files for task status (corrected per Step 0.5)
+5. Pick up where the last session actually left off:
    - Check which scopes are done, uphill, or downhill
    - Identify the next scope to tackle (riskiest remaining)
    - Continue the TDD loop from Step 4
@@ -280,7 +402,13 @@ work remains, trigger an interactive scope hammering session:
 
 1. **Check session budget**:
    ```bash
-   bash <skill-dir>/scripts/check-session-budget.sh <feature-dir>
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SKILL_DIR="$PLUGIN_ROOT/skills/build"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   bash "$SKILL_DIR/scripts/check-session-budget.sh" "$FEATURE_DIR"
    ```
    This outputs: `sessions_used`, `appetite_label`, `appetite_max`, `sessions_remaining`,
    `nice_to_haves`, and `must_haves_remaining`. Use these numbers for capacity decisions.
@@ -309,7 +437,13 @@ Before shipping, check if the session budget allows for nice-to-have work:
 
 1. **Run the session budget script**:
    ```bash
-   bash <skill-dir>/scripts/check-session-budget.sh <feature-dir>
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SKILL_DIR="$PLUGIN_ROOT/skills/build"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   bash "$SKILL_DIR/scripts/check-session-budget.sh" "$FEATURE_DIR"
    ```
 2. **Read the output**: `sessions_remaining` and `nice_to_haves` tell you whether there's budget and work.
 
@@ -330,12 +464,19 @@ When the session must end with work remaining:
 
 1. **Determine handover number**:
    ```bash
-   NEXT=$(ls <feature-dir>/handover-*.md 2>/dev/null | wc -l)
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   NEXT=$(ls "$FEATURE_DIR"/handover-*.md 2>/dev/null | wc -l)
    NEXT=$((NEXT + 1))
    PADDED=$(printf "%02d" "$NEXT")
+   echo "$FEATURE_DIR/handover-$PADDED.md"
    ```
 
-2. **Write handover document** to `<feature-dir>/handover-<NN>.md`:
+2. **Write handover document** to `$FEATURE_DIR/handover-<NN>.md` (path printed by the
+   snippet above):
    ```markdown
    # Handover — Session <NN>
 
@@ -371,9 +512,24 @@ When the session must end with work remaining:
    - <Tests added/modified>
    ```
 
-3. **Update hillchart.md** with final positions
-4. **Commit all changes** (code + shapeup docs)
-5. Tell user: "Run `/build <NNN>` in a new session to continue"
+3. **Update hillchart.md** with final positions — symbols must match each scope file's
+   `## Hill Position` line. Stale tracking is the #1 reason the next session's Step 0.5
+   audit finds drift.
+4. **Run the audit-mode consistency check**:
+   ```bash
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   bash "$PLUGIN_ROOT/hooks/lib/check-consistency.sh" "$FEATURE_DIR" audit
+   ```
+   Resolve every FAIL. It is OK to end a session with WARNs (e.g. a scope exists on disk
+   but isn't in the hill chart yet — note that explicitly in the handover). It is NOT OK
+   to hand over with FAILs: the next session will start from a broken tracking state.
+5. **Commit all changes** (code + shapeup docs in a single commit so the tracking state
+   matches the code state)
+6. Tell user: "Run `/build <KEY>` in a new session to continue"
 
 ### Step 8: Ready to Ship
 
@@ -386,10 +542,25 @@ When all must-haves are complete and all scopes are downhill or done:
 
 2. **Update hill chart** — all scopes should show ✓ or ▼ near done
 
-3. **Write build summary** for the ship phase.
+3. **Run the pre-ship consistency check** — this is a gate, not a suggestion:
+   ```bash
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   bash "$PLUGIN_ROOT/hooks/lib/check-consistency.sh" "$FEATURE_DIR" pre-ship
+   ```
+   Every FAIL must be resolved before proceeding. The script blocks on: scopes still
+   ▲ Uphill, unchecked must-haves not explicitly cut, missing Frame Go or Shape Go.
+   Fix the underlying issues (tick boxes that are actually done, cut tasks that you've
+   decided not to ship by prefixing with `~`, or update hill positions) — do NOT edit
+   the script to silence it. Re-run until it exits 0.
+
+4. **Write build summary** for the ship phase.
    This is the builder's raw notes — ship uses it as *input* (alongside `frame.md` and `package.md`)
    to produce the formal `decisions.md`. Keep it factual; ship handles the analysis.
-   Write `<feature-dir>/build-summary.md`:
+   Write `$FEATURE_DIR/build-summary.md` (resolve `$FEATURE_DIR` per the standard prelude):
    ```markdown
    # Build Summary — <Feature Name>
 

@@ -49,18 +49,82 @@ Your job:
 
 ---
 
+## Paths and Variables
+
+Every bash snippet below assumes these shell variables are set at the **start of the
+snippet**. Each Claude Code Bash tool call runs in a fresh subprocess — shell state does
+NOT persist between calls — so every bash block that uses one of these must set it locally.
+
+- **`<project-root>`**: the user's working repository, where `.shapeup/` lives.
+  Resolves to `"${CLAUDE_PROJECT_DIR:-$(pwd)}"`.
+- **`<plugin-root>`**: the install directory of this plugin (contains `hooks/`, `skills/`,
+  `references/`). Resolves to `"${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"`.
+- **`<skill-dir>`**: this skill's directory, equal to `$PLUGIN_ROOT/skills/ship`.
+- **`<feature-dir>`** / **`$FEATURE_DIR`**: the resolved feature folder. Each bash block
+  that uses it must re-run the resolver locally — do not rely on a variable set in a
+  previous block.
+- **`<KEY>`** / **`$KEY`**: the feature key the user typed (date-slug, short slug, or
+  legacy NNN).
+
+Standard bash prelude — paste at the top of any snippet that needs these:
+
+```bash
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SKILL_DIR="$PLUGIN_ROOT/skills/ship"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+KEY="<feature key the user typed>"
+FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+```
+
+---
+
 ## Process
+
+### Step 0: Verify Prior State (Trust but Verify)
+
+Before archiving, **dispatch an Explore subagent** to verify the build actually shipped what
+the tracking documents claim. Agents that skip this step produce ADRs for features that were
+silently left half-done, because `build-summary.md` said "shipped" when the code didn't.
+
+1. Resolve the feature folder:
+   ```bash
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   echo "$FEATURE_DIR"
+   ```
+
+2. Dispatch an Explore subagent with this question: for every must-have listed as `[x]` in
+   every `scope-*.md` file, is there corresponding code, tests, and (for web projects) a
+   working UI affordance? Report any `[x]` marked without evidence.
+
+3. Run the pre-ship consistency check:
+   ```bash
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   bash "$PLUGIN_ROOT/hooks/lib/check-consistency.sh" "$FEATURE_DIR" pre-ship
+   ```
+   If any FAIL appears, STOP. Tell the user the feature is not actually ready to ship and
+   either send them back to `/build <KEY>` to finish or mark the remaining tasks cut (with
+   `~`) and commit that decision before re-running `/ship`.
 
 ### Step 1: Load Feature
 
-1. Parse the feature ID from the user's input (e.g., "001")
-2. Find the feature folder:
+1. Use the `$FEATURE_DIR` resolved in Step 0 (re-resolve with the standard prelude).
+2. **Check for build summary first** (token-efficient path):
    ```bash
-   ls -d <project-root>/.shapeup/<NNN>-*
-   ```
-3. **Check for build summary first** (token-efficient path):
-   ```bash
-   cat <feature-dir>/build-summary.md 2>/dev/null
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   cat "$FEATURE_DIR/build-summary.md" 2>/dev/null
    ```
    - **If `build-summary.md` exists**: Read it + `frame.md` + `package.md`.
      The build summary contains cuts, files changed, and lessons learned.
@@ -74,7 +138,8 @@ Your job:
      - `scopes/*.md` — all scope files with task lists
      - `decisions.md` — if already exists from build phase
 
-4. Set up TodoWrite:
+3. Set up TodoWrite:
+   - Verifying prior state (subagent audit + pre-ship check)
    - Reading feature documentation
    - Extracting architectural decisions
    - Producing ADRs
@@ -118,14 +183,17 @@ Create Architecture Decision Records in `docs/decisions/`:
 
 1. Create docs directory if needed:
    ```bash
-   mkdir -p <project-root>/docs/decisions
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   mkdir -p "$PROJECT_ROOT/docs/decisions"
    ```
 
 2. Determine next ADR number:
    ```bash
-   NEXT=$(ls <project-root>/docs/decisions/*.md 2>/dev/null | wc -l)
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   NEXT=$(ls "$PROJECT_ROOT/docs/decisions/"*.md 2>/dev/null | wc -l)
    NEXT=$((NEXT + 1))
    PADDED=$(printf "%04d" "$NEXT")
+   echo "$PADDED"
    ```
 
 3. Write one ADR per major decision (typically 1-4 per feature).
@@ -229,7 +297,8 @@ Create Architecture Decision Records in `docs/decisions/`:
 
 1. Create or read `docs/architecture.md`:
    ```bash
-   touch <project-root>/docs/architecture.md
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   touch "$PROJECT_ROOT/docs/architecture.md"
    ```
 
 2. Add a section for this feature's contributions. The architecture doc accumulates
@@ -287,18 +356,27 @@ Write `decisions.md` inside the feature folder (if not already present from buil
 
 1. Rename folder to shipped:
    ```bash
-   CURRENT=$(ls -d <project-root>/.shapeup/<NNN>-*-building)
-   NEW=$(echo "$CURRENT" | sed 's/-building$/-shipped/')
-   mv "$CURRENT" "$NEW"
+   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+   KEY="<feature key the user typed>"
+   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
+   NEW=$(echo "$FEATURE_DIR" | sed 's/-building$/-shipped/')
+   mv "$FEATURE_DIR" "$NEW"
    ```
 
-2. Update `frame.md` and `package.md` status lines to reflect shipped state
+2. Update `frame.md` and `package.md` status lines to reflect shipped state (the new
+   path is `$NEW` from the snippet above; subsequent steps re-run the resolver to find it).
 
 ### Step 7: Regenerate Dashboard
 
 Run the index regeneration:
 ```bash
-bash <skill-dir>/scripts/regenerate-index.sh <project-root>/.shapeup
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+SKILL_DIR="$PLUGIN_ROOT/skills/ship"
+SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
+bash "$SKILL_DIR/scripts/regenerate-index.sh" "$SHAPEUP_DIR"
 ```
 
 This scans all feature folders and produces `.shapeup/index.md`.
