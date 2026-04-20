@@ -1,0 +1,58 @@
+#!/bin/bash
+# commit-msg — enforces the prompt-change workflow when SKILL.md files change.
+#
+# If the commit modifies a `skills/*/SKILL.md` and does NOT also stage changes
+# under `tests/results/`, require the commit message to contain one of these
+# explicit acknowledgements:
+#
+#   - "baselines unchanged"  (you ran diff-against-baseline.sh, saw no drift)
+#   - "no-baseline-drift"    (same, short form)
+#   - "breaking change"      (you intentionally changed the contract)
+#
+# This catches the #1 sloppy-agent mistake: editing a prompt and committing
+# without running the snapshot regression gate.
+#
+# Bypass with --no-verify ONLY if you know exactly what you're doing.
+
+set -uo pipefail
+
+MSG_FILE="$1"
+if [ -z "$MSG_FILE" ] || [ ! -f "$MSG_FILE" ]; then
+  exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Which files are staged in this commit?
+staged=$(git diff --cached --name-only 2>/dev/null)
+
+# Does this commit touch any SKILL.md?
+if ! echo "$staged" | grep -qE '^skills/[^/]+/SKILL\.md$'; then
+  exit 0
+fi
+
+# Did the commit also stage baseline updates?
+if echo "$staged" | grep -q '^tests/results/'; then
+  exit 0
+fi
+
+# Did the author explicitly acknowledge the no-drift case?
+MSG_LOWER=$(tr '[:upper:]' '[:lower:]' < "$MSG_FILE")
+if echo "$MSG_LOWER" | grep -qE 'baselines? unchanged|no-?baseline-?drift|breaking change'; then
+  exit 0
+fi
+
+cat <<EOF >&2
+commit-msg: SKILL.md changed but tests/results/ did not.
+
+You must either:
+  (a) Run  bash tests/diff-against-baseline.sh  and:
+        - if no drift: add "baselines unchanged" to the commit body
+        - if drift:    run with --update and stage tests/results/
+  (b) Or, if this is a deliberate contract break (new/removed files, renamed
+      status labels, shifted steps): add "breaking change" to the commit body
+      and bump the minor/major version in plugin.json + marketplace.json.
+
+See CLAUDE.md for the full prompt-change workflow.
+EOF
+exit 1

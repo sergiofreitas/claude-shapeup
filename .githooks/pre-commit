@@ -1,0 +1,30 @@
+#!/bin/bash
+# pre-commit — runs the unit test layer before every commit.
+#
+# Fast (sub-second), deterministic. Blocks the commit if unit tests fail,
+# which catches: broken hooks, ungrounded placeholders (B1), un-assigned
+# $FEATURE_DIR (B2), ripple-check regressions, phase-guard regressions,
+# session-budget regressions, resolver regressions, consistency-check
+# regressions.
+#
+# Bypass with --no-verify ONLY if you understand why and the failing tests
+# are irrelevant to your change.
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT" || exit 1
+
+# Only run if unit tests exist.
+if [ ! -x "$REPO_ROOT/tests/run-all.sh" ]; then
+  exit 0
+fi
+
+if ! bash "$REPO_ROOT/tests/run-all.sh" --unit >/tmp/pre-commit-unit.log 2>&1; then
+  echo "pre-commit: unit tests failed. Commit blocked." >&2
+  echo "See /tmp/pre-commit-unit.log for details. Summary:" >&2
+  tail -15 /tmp/pre-commit-unit.log >&2
+  exit 1
+fi
+
+exit 0

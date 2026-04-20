@@ -6,6 +6,24 @@ only verify shape ("does hillchart.md have a Scopes section?"), not content qual
 The regression story therefore has three layers, and you need to run all three whenever
 you touch a SKILL.md, a hook, or a shared script.
 
+## One-time setup
+
+After cloning, activate the tracked git hooks that enforce the workflow at commit time:
+
+```bash
+bash scripts/setup-hooks.sh
+```
+
+This sets `core.hooksPath` to `.githooks/`. From then on:
+
+- **`pre-commit`** runs `tests/run-all.sh --unit` and blocks the commit on red.
+- **`commit-msg`** blocks commits that change a `skills/*/SKILL.md` without either
+  co-staging `tests/results/` updates OR including `baselines unchanged` /
+  `breaking change` in the commit message body.
+
+Bypass with `git commit --no-verify` only when you know exactly why and the
+bypassed check is genuinely irrelevant to your change.
+
 ## Test layers
 
 | Layer | Runs | What it catches | Cost |
