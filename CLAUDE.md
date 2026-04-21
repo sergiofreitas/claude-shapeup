@@ -3,14 +3,13 @@
 This repo is a Claude Code plugin. Its skills under `skills/*/SKILL.md` are
 mostly prompts — the agent's behavior is defined by the text, not by code.
 A prompt edit can silently shift what the agent produces, even when every
-deterministic test still passes. Follow the workflow below on every session
-that touches a SKILL.md, a hook, or a shared script. Full rationale:
+deterministic test still passes. Full rationale:
 [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## One-time setup (per clone)
 
 Run once after cloning, to activate the local git hooks that enforce the
-workflow at commit time:
+workflow at commit and push time:
 
 ```bash
 bash scripts/setup-hooks.sh
@@ -18,6 +17,17 @@ bash scripts/setup-hooks.sh
 
 This points `core.hooksPath` at `.githooks/` (tracked in the repo), so
 the hooks stay in sync as the repo evolves.
+
+## Test architecture (two layers, no snapshots)
+
+| Layer | Subject | Determinism | Where it fires |
+|---|---|---|---|
+| Unit | Hooks, scripts, prompt structure (placeholder grounding, `$FEATURE_DIR` block locality, hook wiring) | Deterministic — exact text assertions | `tests/unit/*.sh`; runs on `pre-commit` |
+| Behavioral | Agent outcomes via LLM-as-judge against rubric-based scenarios | Non-deterministic — evaluated by meaning, not text | `tests/behavioral/`; runs on `pre-push` when prompts / hooks / references change |
+
+There is **no snapshot/baseline layer**. Exact-text diffs against a
+non-deterministic generator are a category error. Regressions on meaning belong
+in the behavioral layer; regressions on scaffolding belong in the unit layer.
 
 ## Before editing a prompt
 
@@ -34,26 +44,25 @@ the hooks stay in sync as the repo evolves.
    ```bash
    bash tests/run-all.sh --unit
    ```
-2. Run the snapshot regression gate:
+2. If the change is semantic (not just wording), run the behavioral suite:
    ```bash
-   bash tests/diff-against-baseline.sh
+   bash tests/run-all.sh --behavioral
    ```
-   - **No drift** → commit. Add `baselines unchanged` to the commit body.
-   - **Intentional drift** → `bash tests/diff-against-baseline.sh --update`,
-     stage `tests/results/` alongside the prompt edit, commit both together.
-   - **Unintentional drift** → tighten the prompt until diffs disappear.
+   Behavioral is non-deterministic — treat a single FAIL as a flag to
+   re-run once, not a hard block. Consistent failures are real regressions.
+3. If the change introduces a new outcome invariant — e.g. a new commit rule,
+   a renamed status, a reshaped artifact — add a scenario under
+   `tests/behavioral/scenarios/` and a criterion under
+   `tests/behavioral/criteria/` that pins the new invariant.
 
 ## Commit discipline
 
 - **One SKILL = one commit.** Never combine edits to multiple SKILLs in a
-  single commit — baselines become impossible to attribute.
+  single commit — regressions become impossible to attribute.
 - **Never manually edit `plugin.json` / `marketplace.json` versions.** The
   `pre-push` hook bumps the patch automatically. Exception: explicit minor
   or major bumps for breaking changes (new files emitted, status labels
   renamed, step numbers shifted).
-- **Never run `--update` without reading the diff.** If you find yourself
-  rubber-stamping baselines, generation is non-deterministic — fix
-  temperature / seed / prompt determinism, don't keep re-baselining.
 - **Never skip hooks with `--no-verify`** unless you know exactly why and
   the tests that would have fired are irrelevant to the change.
 

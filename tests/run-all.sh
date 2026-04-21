@@ -1,18 +1,26 @@
 #!/bin/bash
-# run-all.sh — Complete test suite for the Shape Up plugin
+# run-all.sh — Two-layer test suite for the Shape Up plugin
 #
 # Usage:
-#   ./tests/run-all.sh                Run all tests (unit + structural + behavioral)
-#   ./tests/run-all.sh --unit         Run only unit tests (no LLM, fast)
-#   ./tests/run-all.sh --structural   Generate artifacts + run structural checks
-#   ./tests/run-all.sh --behavioral   Run only behavioral tests
-#   ./tests/run-all.sh --no-generate  Skip artifact generation (use existing results/)
+#   ./tests/run-all.sh                Run unit + behavioral
+#   ./tests/run-all.sh --unit         Deterministic tests only (no LLM, seconds)
+#   ./tests/run-all.sh --behavioral   Criteria-based behavioral tests (LLM-as-judge, slow)
+#
+# Design:
+#   - Unit tests cover scaffolding (hooks, scripts, prompt structure) where exact
+#     outputs are verifiable. Fast, deterministic, runs on every commit.
+#   - Behavioral tests cover outcomes (what the agent actually does when a SKILL
+#     is applied) via an LLM judge against rubric-based criteria. Slow and
+#     non-deterministic — runs on pre-push / in CI, not on every commit.
+#
+# There is no snapshot/baseline layer: exact-text diffs against a non-deterministic
+# generator is a category error. Regressions on meaning belong in the behavioral
+# layer; regressions on scaffolding belong in the unit layer.
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
@@ -20,37 +28,28 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 RUN_UNIT=false
-RUN_STRUCTURAL=false
 RUN_BEHAVIORAL=false
-SKIP_GENERATE=false
 EXPLICIT_SELECTION=false
 
-# Parse args
 for arg in "$@"; do
   case "$arg" in
     --unit)        RUN_UNIT=true; EXPLICIT_SELECTION=true ;;
-    --structural)  RUN_STRUCTURAL=true; EXPLICIT_SELECTION=true ;;
     --behavioral)  RUN_BEHAVIORAL=true; EXPLICIT_SELECTION=true ;;
-    --no-generate) SKIP_GENERATE=true ;;
     --help|-h)
-      echo "Usage: $0 [--unit] [--structural] [--behavioral] [--no-generate]"
+      echo "Usage: $0 [--unit] [--behavioral]"
       echo ""
       echo "Layers:"
-      echo "  --unit          Hooks and scripts (no LLM, seconds)"
-      echo "  --structural    Artifact generation + structural checks (needs claude CLI)"
-      echo "  --behavioral    Criteria-based behavioral tests (needs claude CLI)"
-      echo "  --no-generate   Skip artifact generation, use existing results/"
+      echo "  --unit          Hooks, scripts, prompt structure (no LLM, seconds)"
+      echo "  --behavioral    Agent outcomes via LLM-as-judge (needs claude CLI)"
       echo ""
-      echo "Default: run all layers"
+      echo "Default: run both layers"
       exit 0
       ;;
   esac
 done
 
-# If no explicit selection, run all layers
 if [ "$EXPLICIT_SELECTION" = false ]; then
   RUN_UNIT=true
-  RUN_STRUCTURAL=true
   RUN_BEHAVIORAL=true
 fi
 
@@ -64,7 +63,7 @@ echo -e "${BOLD}╚════════════════════�
 echo ""
 
 # ─────────────────────────────────────────
-# Layer 1: Unit Tests (no LLM)
+# Layer 1: Unit Tests (deterministic, no LLM)
 # ─────────────────────────────────────────
 if [ "$RUN_UNIT" = true ]; then
   LAYERS_RUN=$((LAYERS_RUN + 1))
@@ -87,9 +86,8 @@ if [ "$RUN_UNIT" = true ]; then
 
   if [ "$unit_fail" -gt 0 ]; then
     echo -e "${RED}Unit tests failed. Fix before running LLM tests.${NC}"
-    if [ "$RUN_STRUCTURAL" = true ] || [ "$RUN_BEHAVIORAL" = true ]; then
-      echo "Skipping remaining layers."
-      RUN_STRUCTURAL=false
+    if [ "$RUN_BEHAVIORAL" = true ]; then
+      echo "Skipping behavioral layer."
       RUN_BEHAVIORAL=false
     fi
   else
@@ -99,43 +97,11 @@ if [ "$RUN_UNIT" = true ]; then
 fi
 
 # ─────────────────────────────────────────
-# Layer 2: Structural Tests (artifact generation + checks)
-# ─────────────────────────────────────────
-if [ "$RUN_STRUCTURAL" = true ]; then
-  LAYERS_RUN=$((LAYERS_RUN + 1))
-  echo -e "${BOLD}━━━ Layer 2: Structural Tests ━━━${NC}"
-  echo ""
-
-  if ! command -v claude &> /dev/null; then
-    echo -e "${YELLOW}Skipping: claude CLI not found (needed for artifact generation)${NC}"
-    echo "Install Claude Code or run with --unit for deterministic tests only."
-  else
-    # Generate artifacts if needed
-    if [ "$SKIP_GENERATE" = false ]; then
-      echo "Generating artifacts from fixtures..."
-      echo ""
-      bash "$SCRIPT_DIR/generate-artifacts.sh" --all
-      echo ""
-    fi
-
-    # Run structural checks on generated artifacts
-    echo "Running structural checks..."
-    echo ""
-    if bash "$SCRIPT_DIR/run-tests.sh" --all; then
-      TOTAL_PASS=$((TOTAL_PASS + 1))
-    else
-      TOTAL_FAIL=$((TOTAL_FAIL + 1))
-    fi
-  fi
-  echo ""
-fi
-
-# ─────────────────────────────────────────
-# Layer 3: Behavioral Tests (LLM-as-judge)
+# Layer 2: Behavioral Tests (LLM-as-judge)
 # ─────────────────────────────────────────
 if [ "$RUN_BEHAVIORAL" = true ]; then
   LAYERS_RUN=$((LAYERS_RUN + 1))
-  echo -e "${BOLD}━━━ Layer 3: Behavioral Tests ━━━${NC}"
+  echo -e "${BOLD}━━━ Layer 2: Behavioral Tests (LLM-as-judge) ━━━${NC}"
   echo ""
 
   if ! command -v claude &> /dev/null; then
