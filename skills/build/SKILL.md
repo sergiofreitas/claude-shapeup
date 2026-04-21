@@ -301,11 +301,19 @@ expected part of doing real work. The package defines the problem, appetite, and
 
 When a user raises a new requirement, concern, or question during a build session:
 
-1. **Capture it as a task** in an existing scope, or create a new scope if it doesn't fit
+1. **Capture it as a task** in an existing scope whose business capability already covers
+   the discovery, OR create a new scope if it doesn't fit. New scope files MUST be named
+   after a business capability, never a technical layer — same rule as Step 2.
 2. **Apply scope hammering** (Gate 1): Is it a must-have or nice-to-have?
    - Default: nice-to-have (`~`). Elevate only if truly critical to the core feature.
-3. **Update the hill chart** if a new scope was created
-4. **Continue building**
+3. **Cancel superseded tasks** if the discovery replaces existing work — move the obsolete
+   tasks under `## Cut` or prefix with `~` in the scope file. Do NOT silently delete.
+4. **Update the hill chart** if a new scope was created — add it in the same edit that
+   records any other progress for the current scope.
+5. **Continue building.** When the parent scope reaches its commit point (Step 4.J), the
+   new/updated discovery scope files land in the **same commit** as the parent scope's
+   progress. The causal link (this discovery justified this closure) is lost if you split
+   them across two commits.
 
 Re-framing or re-shaping mid-build breaks momentum and signals to the user that the shaped
 solution was incomplete, when in reality scope emergence is the expected outcome of building.
@@ -343,21 +351,32 @@ A. Write tests for the scope's must-haves
 B. Implement (backend → frontend, vertical integration)
 C. Tests pass
 D. Browser verification (web projects)
-E. Update hill chart position
-F. Commit changes with meaningful message
-G. Mark scope tasks as done in scope file — tick `[x]` for every must-have that just
+E. Mark scope tasks as done in scope file — tick `[x]` for every must-have that just
    landed; leave `[ ]` for anything still pending. If you finished a nice-to-have, tick
    its `[ ]` too. If a task was cut during this step, move it under a `## Cut` heading
    or prefix it with `~` — do NOT silently delete it.
-H. Update the scope file's `## Hill Position` line to match the new reality (▲ → ▼ → ✓)
-I. Update `hillchart.md` so its symbol for this scope matches the scope file
-J. Update TodoWrite
-K. Run the consistency check as a self-audit (see "Self-audit invocation" below).
-   Resolve every FAIL before moving to the next scope. FAILs at this point mean your
-   tracking artifacts disagree with each other — fix them now, not at ship time.
+F. Update the scope file's `## Hill Position` line to match the new reality (▲ → ▼ → ✓)
+G. Update `hillchart.md` so its symbol for this scope matches the scope file. If new
+   scopes emerged during this work (see "Handling User Feedback During Build" below),
+   add them to `hillchart.md` in the same edit. New scope files MUST be named after a
+   business capability, never a technical layer — see Step 2 for naming rules.
+H. Update TodoWrite
+I. Run the consistency check as a self-audit (see "Self-audit invocation" below).
+   Resolve every FAIL before committing — FAILs mean your tracking artifacts disagree
+   with each other.
+J. Commit. One commit per scope completion, bundling:
+     - code changes
+     - the touched scope file(s) — checkboxes + Hill Position line
+     - `hillchart.md`
+     - any new/updated discovery scope files (see "Handling User Feedback" below)
+   Commit message is freeform; follow project conventions if the repo has them (check
+   a project-level CLAUDE.md or recent `git log` for style). A PreToolUse `commit-gate`
+   re-runs the consistency audit on the staged diff and blocks the commit if scopes,
+   must-haves, and hillchart disagree. Handover documents are a separate commit at
+   session end (Step 7) — do not bundle them with scope-completion commits.
 ```
 
-**Self-audit invocation** (use after each scope's substep K):
+**Self-audit invocation** (use after each scope's substep I, before substep J):
 
 ```bash
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
@@ -527,8 +546,11 @@ When the session must end with work remaining:
    Resolve every FAIL. It is OK to end a session with WARNs (e.g. a scope exists on disk
    but isn't in the hill chart yet — note that explicitly in the handover). It is NOT OK
    to hand over with FAILs: the next session will start from a broken tracking state.
-5. **Commit all changes** (code + shapeup docs in a single commit so the tracking state
-   matches the code state)
+5. **Commit the handover as its own commit.** By this point every finished scope should
+   already be in its own commit (Step 4.J). The handover commit contains only the
+   handover document and any final tracking-doc touch-ups that weren't part of a scope
+   commit (e.g. carry-over notes). Keeping handover separate from scope commits
+   preserves the "one scope = one commit" grain the next session can walk through.
 6. Tell user: "Run `/build <KEY>` in a new session to continue"
 
 ### Step 8: Ready to Ship
