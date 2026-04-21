@@ -60,9 +60,11 @@ in the behavioral layer; regressions on scaffolding belong in the unit layer.
 - **One SKILL = one commit.** Never combine edits to multiple SKILLs in a
   single commit — regressions become impossible to attribute.
 - **Never manually edit `plugin.json` / `marketplace.json` versions.** The
-  `pre-push` hook bumps the patch automatically. Exception: explicit minor
-  or major bumps for breaking changes (new files emitted, status labels
-  renamed, step numbers shifted).
+  `post-commit` hook bumps the patch automatically and folds the bump into
+  the commit that just landed. Exception: explicit minor or major bumps for
+  breaking changes (new files emitted, status labels renamed, step numbers
+  shifted) — edit the JSONs in the same commit and the hook will see the
+  version already changed and skip the auto-bump.
 - **Never skip hooks with `--no-verify`** unless you know exactly why and
   the tests that would have fired are irrelevant to the change.
 
@@ -88,8 +90,10 @@ A prompt change is breaking when it shifts the contract the agent gives
 the user: new files emitted, existing files removed, status labels
 renamed, step numbers reordered. For breaking changes:
 
-1. Edit `plugin.json` and `marketplace.json` manually to bump the minor or
-   major version BEFORE pushing (the pre-push hook only bumps patch).
+1. Edit `plugin.json` and `marketplace.json` in the same commit as the
+   breaking edit to bump the minor or major version (the post-commit hook
+   only bumps patch, and skips when it sees the version already changed in
+   the commit).
 2. Explicitly describe the break in the commit body.
 3. Keep any legacy-path support (e.g. the resolver's NNN fallback) for at
    least one release after the break.

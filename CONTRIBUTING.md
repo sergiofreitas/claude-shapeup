@@ -25,9 +25,13 @@ bash scripts/setup-hooks.sh
 This sets `core.hooksPath` to `.githooks/`. From then on:
 
 - **`pre-commit`** runs `tests/run-all.sh --unit` and blocks the commit on red.
+- **`post-commit`** auto-bumps the patch version in `plugin.json` and
+  `marketplace.json` and folds the bump into the commit that just landed.
+  Skips when the triggering commit already changed the version line, so
+  manual minor / major bumps ride along untouched.
 - **`pre-push`** runs `tests/run-all.sh --behavioral` **only when** any
   `skills/*/SKILL.md`, `hooks/`, `references/`, or `skills/*/scripts/` file
-  changed in the commits being pushed, then auto-bumps the patch version.
+  changed in the commits being pushed.
 
 Bypass with `git commit --no-verify` (or `SHAPEUP_SKIP_BEHAVIORAL=1 git push`)
 only when you know exactly why and the bypassed check is genuinely irrelevant
@@ -99,8 +103,10 @@ numbering shifted. When a change is breaking:
 
 1. Bump the plugin version in `.claude-plugin/plugin.json` and
    `.claude-plugin/marketplace.json` (minor for additive contract changes,
-   major for removals / renames). Do this BEFORE pushing — the pre-push hook
-   only bumps patch.
+   major for removals / renames) in the same commit as the breaking edit.
+   The post-commit hook only bumps patch, and it skips when it sees the
+   version already changed in the commit — so a manual minor/major bump
+   rides along.
 2. Note the breaking change in the commit body.
 3. Keep any legacy-path support code (e.g. the resolver's NNN fallback) until
    at least one release after the break.

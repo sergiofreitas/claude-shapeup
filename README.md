@@ -132,4 +132,4 @@ Fork it, break it, make it yours. Each skill's `references/` directory is self-c
 
 **Before editing a SKILL.md or a hook, read [CLAUDE.md](./CLAUDE.md) and [CONTRIBUTING.md](./CONTRIBUTING.md).** CLAUDE.md is auto-loaded by every Claude Code session and states the hard rules. CONTRIBUTING.md covers the two-layer test suite (deterministic unit tests for scaffolding, LLM-as-judge behavioral tests for agent outcomes) and the prompt-change workflow.
 
-After cloning, run `bash scripts/setup-hooks.sh` once to activate the tracked git hooks: `pre-commit` runs the unit suite on every commit; `pre-push` runs the behavioral suite when any SKILL / hook / reference changed in the pushed range, then auto-bumps the patch version.
+After cloning, run `bash scripts/setup-hooks.sh` once to activate the tracked git hooks: `pre-commit` runs the unit suite on every commit; `post-commit` auto-bumps the patch version and folds the bump into the commit; `pre-push` runs the behavioral suite when any SKILL / hook / reference changed in the pushed range.

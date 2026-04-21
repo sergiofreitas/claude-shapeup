@@ -1,27 +1,19 @@
 #!/bin/bash
-# pre-push — two jobs:
+# pre-push — run the behavioral suite as an outcome gate before allowing a push
+# that touches prompts / hooks / references / shared scripts.
 #
-#   1. If any SKILL.md (or a shared script the skills depend on) changed in the
-#      commits being pushed, run the behavioral suite as an outcome gate.
-#      Behavioral fires LLM-as-judge against rubric-based scenarios — this is
-#      the regression spine for prompt changes. A failure here blocks the push.
+# Version auto-bump used to live here and amend the top commit after the push
+# plan was already frozen, which left the amend local-only. The bump has
+# moved to .githooks/post-commit, which runs while HEAD can still be safely
+# rewritten. This hook is now a pure outcome gate.
 #
-#   2. Auto-bump the patch version in plugin.json and marketplace.json, then
-#      amend the top commit so it carries the bump.
-#
-# Pipe-bypass for when you know what you're doing:
-#   SHAPEUP_SKIP_BEHAVIORAL=1 git push   # skip step 1 only (emergency pushes,
-#                                         # LLM outages, known-noisy judge runs)
+# Bypass (LLM outage, known-noisy judge runs, genuinely unrelated push):
+#   SHAPEUP_SKIP_BEHAVIORAL=1 git push
 
 set -uo pipefail
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
-PLUGIN_JSON="$REPO_ROOT/.claude-plugin/plugin.json"
-MARKETPLACE_JSON="$REPO_ROOT/.claude-plugin/marketplace.json"
-
 ZERO_SHA="0000000000000000000000000000000000000000"
-
-# ───────── Step 1: behavioral gate (if prompts changed) ─────────
 
 touched=""
 while read -r local_ref local_sha remote_ref remote_sha; do
@@ -29,7 +21,6 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   [ "$local_sha" = "$ZERO_SHA" ] && continue  # branch delete
 
   if [ "$remote_sha" = "$ZERO_SHA" ]; then
-    # New branch — use merge-base with HEAD's origin to get a sane range.
     base=$(git merge-base "$local_sha" "origin/HEAD" 2>/dev/null || echo "")
     if [ -n "$base" ]; then
       range="$base..$local_sha"
@@ -46,16 +37,24 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   [ -n "$changed" ] && touched="$touched$changed"$'\n'
 done
 
-if [ -n "$touched" ]; then
-  if [ "${SHAPEUP_SKIP_BEHAVIORAL:-0}" = "1" ]; then
-    echo "pre-push: SHAPEUP_SKIP_BEHAVIORAL=1 — skipping behavioral gate." >&2
-  elif ! command -v claude >/dev/null 2>&1; then
-    echo "pre-push: prompts/scripts changed but claude CLI not installed — behavioral gate skipped." >&2
-    echo "         Install claude or run bash tests/run-all.sh --behavioral before pushing." >&2
-  else
-    echo "pre-push: prompts/scripts changed — running behavioral suite (this takes a few minutes)..." >&2
-    if ! bash "$REPO_ROOT/tests/run-all.sh" --behavioral; then
-      cat >&2 <<EOF
+if [ -z "$touched" ]; then
+  exit 0
+fi
+
+if [ "${SHAPEUP_SKIP_BEHAVIORAL:-0}" = "1" ]; then
+  echo "pre-push: SHAPEUP_SKIP_BEHAVIORAL=1 — skipping behavioral gate." >&2
+  exit 0
+fi
+
+if ! command -v claude >/dev/null 2>&1; then
+  echo "pre-push: prompts/scripts changed but claude CLI not installed — behavioral gate skipped." >&2
+  echo "         Install claude or run bash tests/run-all.sh --behavioral before pushing." >&2
+  exit 0
+fi
+
+echo "pre-push: prompts/scripts changed — running behavioral suite (this takes a few minutes)..." >&2
+if ! bash "$REPO_ROOT/tests/run-all.sh" --behavioral; then
+  cat >&2 <<EOF
 
 pre-push: behavioral suite failed. Push blocked.
 
@@ -70,41 +69,8 @@ scenarios. A failure here usually means one of three things:
 If you have a justified reason to bypass (LLM outage, known-noisy judge run,
 genuinely unrelated push): SHAPEUP_SKIP_BEHAVIORAL=1 git push
 EOF
-      exit 1
-    fi
-    echo "pre-push: behavioral suite passed." >&2
-  fi
+  exit 1
 fi
 
-# ───────── Step 2: auto-bump patch version ─────────
-
-if [ ! -f "$PLUGIN_JSON" ]; then
-  exit 0
-fi
-
-CURRENT=$(grep -oE '"version":\s*"[0-9]+\.[0-9]+\.[0-9]+"' "$PLUGIN_JSON" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-
-if [ -z "$CURRENT" ]; then
-  echo "pre-push: could not parse version from plugin.json" >&2
-  exit 0
-fi
-
-MAJOR=$(echo "$CURRENT" | cut -d. -f1)
-MINOR=$(echo "$CURRENT" | cut -d. -f2)
-PATCH=$(echo "$CURRENT" | cut -d. -f3)
-
-NEW_PATCH=$((PATCH + 1))
-NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-
-sed -i '' "s/\"version\": \"$CURRENT\"/\"version\": \"$NEW_VERSION\"/" "$PLUGIN_JSON"
-
-if [ -f "$MARKETPLACE_JSON" ]; then
-  sed -i '' "s/\"version\": \"$CURRENT\"/\"version\": \"$NEW_VERSION\"/" "$MARKETPLACE_JSON"
-fi
-
-git add "$PLUGIN_JSON" "$MARKETPLACE_JSON" 2>/dev/null
-git commit --amend --no-edit --no-verify >/dev/null 2>&1
-
-echo "pre-push: version bumped $CURRENT → $NEW_VERSION" >&2
-
+echo "pre-push: behavioral suite passed." >&2
 exit 0
