@@ -127,7 +127,7 @@ skills/
 
 This project exists because of [Ryan Singer](https://www.ryansinger.co/)'s work.
 
-The **[Shape Up book](https://basecamp.com/shapeup)** is the foundation — written by Ryan and published by 37signals. It's free to read online and you should read it before using these skills. We distilled it; we didn't replace it.
+The **[Shape Up book](https://basecamp.com/shapeup)** is the foundation — written by Ryan and published by 37signals. It's free to read online (37signals retains copyright) and you should read it before using these skills. We distilled it; we didn't replace it.
 
 Two of Ryan's articles pushed the methodology further and directly shaped these skills. **[Framing](https://www.ryansinger.co/framing/)** introduced a formal step before shaping — lock the problem before you design solutions — which became our `/shapeup:frame` skill and the Frame Go gate. It also renamed "Pitch" to "Package," and we followed suit. **[Pitfalls When Adopting Shape Up](https://www.ryansinger.co/pitfalls-when-adopting-shape-up/)** identified undershaped work as the #1 failure mode, which is why `/shapeup:shape` obsesses over actual codebase analysis and enforces zero TBDs.
 
@@ -135,7 +135,9 @@ Ryan's own **[shaping-skills](https://github.com/rjs/shaping-skills)** repo for 
 
 ## License
 
-MIT
+[MIT](./LICENSE) © 2026 Tiago Peixoto.
+
+"Shape Up" is a methodology and brand of [37signals](https://37signals.com/). This project is an independent, unaffiliated adaptation for Claude Code — it is not endorsed by or affiliated with 37signals or Basecamp.
 
 ## Contributing
 
