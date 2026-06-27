@@ -1,12 +1,12 @@
-# Shape Up Skills for Claude Code
+# Shape Up Skills for AI Coding Agents
 
-Four Claude Code skills that teach your AI agent the [Shape Up](https://basecamp.com/shapeup) methodology. Fixed time, variable scope, zero hand-waving.
+Four Shape Up skills for AI coding agents. The core prompts are packaged for Claude Code and exposed to Codex through project-local skill wrappers. Fixed time, variable scope, zero hand-waving.
 
 **Frame** the problem. **Shape** the solution. **Build** the code. **Ship** the knowledge.
 
 ## Why?
 
-Backlogs are where ideas go to die. Shape Up replaces the infinite todo list with a simple bet: pick a time budget, shape the work to fit, build it, ship it. This project gives Claude Code the vocabulary and guardrails to run that process with you — interactively, one feature at a time.
+Backlogs are where ideas go to die. Shape Up replaces the infinite todo list with a simple bet: pick a time budget, shape the work to fit, build it, ship it. This project gives AI coding agents the vocabulary and guardrails to run that process with you — interactively, one feature at a time.
 
 ## The Skills
 
@@ -21,14 +21,34 @@ Each skill is self-contained with its own reference docs — no external depende
 
 ## Quick Start
 
+### Claude Code
+
 In Claude Code, run:
 
 ```
-/plugin marketplace add tiago-peixoto/claude-shapeup
+/plugin marketplace add sergiofreitas/claude-shapeup
 /plugin install shapeup
 ```
 
 Type `/shapeup:frame` and follow the conversation.
+
+### Codex
+
+This repository includes project-local Codex wrappers in `.codex/skills/`:
+
+- `$shapeup-frame`
+- `$shapeup-shape`
+- `$shapeup-build`
+- `$shapeup-ship`
+
+Open Codex in this repository, invoke the relevant `$shapeup-*` skill, and follow the conversation. The Codex wrappers are intentionally thin: they route to the canonical prompts in `skills/*/SKILL.md` and set expectations for `SHAPEUP_PROJECT_DIR` and `SHAPEUP_PLUGIN_ROOT`.
+
+When using these skills from another project, keep this repository available as the plugin root and set:
+
+```bash
+export SHAPEUP_PLUGIN_ROOT=/path/to/shapeup-agent-skills
+export SHAPEUP_PROJECT_DIR=/path/to/your/project
+```
 
 ## What Happens at Runtime
 
@@ -60,7 +80,7 @@ Inside a `-building` feature, each `scopes/<scope>.md` tracks **user-noticeable 
 checkboxes. A scope is done when its must-have behaviors are `[GREEN]`. Legacy `[ ]`/`[x]`
 scope files are still accepted for one release.
 
-Invoke downstream skills with any of these key forms:
+Invoke downstream skills with any of these key forms in Claude Code. In Codex, use the matching `$shapeup-*` skill and pass the same feature key:
 
 - Full date-slug: `/shapeup:build 2026-04-20-csv-import`
 - Short slug: `/shapeup:build csv-import` (works when the slug is unique across the project)
@@ -68,14 +88,14 @@ Invoke downstream skills with any of these key forms:
 
 ## Hooks
 
-The plugin installs three hooks:
+The plugin installs three hooks. The default `hooks/hooks.json` uses PowerShell for Windows Claude Code users; `hooks/hooks.unix.json` keeps the Bash commands for Unix-like environments:
 
-- **`phase-guard.sh`** (UserPromptSubmit) — blocks `/shape`, `/build`, `/ship` when gates
+- **`phase-guard.ps1` / `phase-guard.sh`** (UserPromptSubmit) — blocks `/shape`, `/build`, `/ship` when gates
   haven't been passed. Resolves any accepted key form to the correct feature folder and
   verifies Frame Go / Shape Go / `build-summary.md` exists.
-- **`ripple-check.sh`** (PostToolUse) — watches `.shapeup/**/*.md` edits and nudges the
+- **`ripple-check.ps1` / `ripple-check.sh`** (PostToolUse) — watches `.shapeup/**/*.md` edits and nudges the
   agent when a change to one document likely affects another. Advisory only.
-- **`commit-gate.sh`** (PreToolUse) — intercepts `git commit` and blocks a scope-completion
+- **`commit-gate.ps1` / `commit-gate.sh`** (PreToolUse) — intercepts `git commit` and blocks a scope-completion
   commit when the scope files, hill chart, and behavior states disagree. Runs the consistency
   audit on the staged `.shapeup/` diff so drift can't be committed.
 
@@ -84,43 +104,50 @@ The plugin installs three hooks:
 Shared libraries under `hooks/lib/` back the "trust but verify" pattern that shape/build/ship
 and the commit gate use:
 
-- **`resolve-feature.sh`** — accepts any key form, returns the feature folder path.
-- **`check-consistency.sh`** — audits a feature folder for drift between scope **behavior
+- **`resolve-feature.ps1` / `resolve-feature.sh`** — accepts any key form, returns the feature folder path.
+- **`check-consistency.ps1` / `check-consistency.sh`** — audits a feature folder for drift between scope **behavior
   states** (`[RED]`/`[GREEN]`, or legacy checkboxes), hill chart symbols, and the pre-ship
   gate. Skills call it before marking a scope done and as the gate into `/ship`; FAILs must be
   resolved, not silenced.
-- **`commit-gate.sh`** — the gate library the `commit-gate` hook runs on the staged
+- **`commit-gate.ps1` / `commit-gate.sh`** — the gate library the `commit-gate` hook runs on the staged
   `.shapeup/` diff (see Hooks above).
 
 ## Project Structure
 
 ```
-.claude-plugin/
+.claude-plugin/                  # Claude Code package metadata
 ├── plugin.json
 └── marketplace.json
+.codex/skills/                  # Codex project-local wrappers
+├── shapeup-frame/
+├── shapeup-shape/
+├── shapeup-build/
+└── shapeup-ship/
 hooks/
-├── hooks.json
-├── phase-guard.sh
-├── ripple-check.sh
-├── commit-gate.sh
+├── hooks.json                 # Windows/PowerShell default
+├── hooks.unix.json            # Bash hook commands for Unix-like hosts
+├── hooks.windows.json         # Explicit Windows hook commands
+├── phase-guard.ps1 / phase-guard.sh
+├── ripple-check.ps1 / ripple-check.sh
+├── commit-gate.ps1 / commit-gate.sh
 └── lib/
-    ├── resolve-feature.sh
-    ├── check-consistency.sh
-    └── commit-gate.sh
+    ├── resolve-feature.ps1 / resolve-feature.sh
+    ├── check-consistency.ps1 / check-consistency.sh
+    └── commit-gate.ps1 / commit-gate.sh
 references/                      # 9 shared methodology docs (00-glossary … 08-framing)
 skills/
 ├── frame/
 │   ├── SKILL.md
-│   └── scripts/init-feature.sh
+│   └── scripts/init-feature.ps1 / init-feature.sh
 ├── shape/
 │   ├── SKILL.md
-│   └── scripts/validate-package.sh
+│   └── scripts/validate-package.ps1 / validate-package.sh
 ├── build/
 │   ├── SKILL.md
-│   └── scripts/update-hillchart.sh
+│   └── scripts/update-hillchart.ps1 / update-hillchart.sh
 └── ship/
     ├── SKILL.md
-    └── scripts/regenerate-index.sh
+    └── scripts/regenerate-index.ps1 / regenerate-index.sh
 ```
 
 ## Acknowledgments
@@ -137,12 +164,12 @@ Ryan's own **[shaping-skills](https://github.com/rjs/shaping-skills)** repo for 
 
 [MIT](./LICENSE) © 2026 Tiago Peixoto.
 
-"Shape Up" is a methodology and brand of [37signals](https://37signals.com/). This project is an independent, unaffiliated adaptation for Claude Code — it is not endorsed by or affiliated with 37signals or Basecamp.
+"Shape Up" is a methodology and brand of [37signals](https://37signals.com/). This project is an independent, unaffiliated adaptation for AI coding agents — it is not endorsed by or affiliated with 37signals or Basecamp.
 
 ## Contributing
 
 Fork it, break it, make it yours. Each skill's `references/` directory is self-contained — swap in your own methodology docs, add domain-specific references, or build new skills for phases we skipped (a `/shapeup:bet` skill for the betting table, anyone?).
 
-**Before editing a SKILL.md or a hook, read [CLAUDE.md](./CLAUDE.md) and [CONTRIBUTING.md](./CONTRIBUTING.md).** CLAUDE.md is auto-loaded by every Claude Code session and states the hard rules. CONTRIBUTING.md covers the two-layer test suite (deterministic unit tests for scaffolding, LLM-as-judge behavioral tests for agent outcomes) and the prompt-change workflow.
+**Before editing a SKILL.md or a hook, read [AGENTS.md](./AGENTS.md), [CLAUDE.md](./CLAUDE.md), and [CONTRIBUTING.md](./CONTRIBUTING.md).** AGENTS.md gives Codex-facing repo guidance, CLAUDE.md preserves Claude Code workflow rules, and CONTRIBUTING.md covers the two-layer test suite (deterministic unit tests for scaffolding, LLM-as-judge behavioral tests for agent outcomes) and the prompt-change workflow.
 
-After cloning, run `bash scripts/setup-hooks.sh` once to activate the tracked git hooks: `pre-commit` runs the unit suite on every commit; `post-commit` auto-bumps the patch version and folds the bump into the commit; `pre-push` runs the behavioral suite when any SKILL / hook / reference changed in the pushed range.
+After cloning, run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-hooks.ps1` on Windows or `bash scripts/setup-hooks.sh` on Unix once to activate the tracked git hooks: `pre-commit` runs the unit suite on every commit; `post-commit` auto-bumps the patch version and folds the bump into the commit; `pre-push` runs the behavioral suite when any SKILL / hook / reference changed in the pushed range.

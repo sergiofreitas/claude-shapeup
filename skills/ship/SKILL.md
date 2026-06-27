@@ -52,13 +52,13 @@ Your job:
 ## Paths and Variables
 
 Every bash snippet below assumes these shell variables are set at the **start of the
-snippet**. Each Claude Code Bash tool call runs in a fresh subprocess — shell state does
+snippet**. Each agent shell tool call may run in a fresh subprocess — shell state does
 NOT persist between calls — so every bash block that uses one of these must set it locally.
 
 - **`<project-root>`**: the user's working repository, where `.shapeup/` lives.
-  Resolves to `"${CLAUDE_PROJECT_DIR:-$(pwd)}"`.
+  Resolves to `"${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"`.
 - **`<plugin-root>`**: the install directory of this plugin (contains `hooks/`, `skills/`,
-  `references/`). Resolves to `"${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"`.
+  `references/`). Resolves to `"${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"`.
 - **`<skill-dir>`**: this skill's directory, equal to `$PLUGIN_ROOT/skills/ship`.
 - **`<feature-dir>`** / **`$FEATURE_DIR`**: the resolved feature folder. Each bash block
   that uses it must re-run the resolver locally — do not rely on a variable set in a
@@ -69,13 +69,18 @@ NOT persist between calls — so every bash block that uses one of these must se
 Standard bash prelude — paste at the top of any snippet that needs these:
 
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SKILL_DIR="$PLUGIN_ROOT/skills/ship"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 KEY="<feature key the user typed>"
 FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
 ```
+
+On Windows PowerShell, use the `.ps1` script beside each `.sh` script with the same
+arguments. Example: replace `bash "$SKILL_DIR/scripts/init-feature.sh" ...` with
+`powershell -NoProfile -ExecutionPolicy Bypass -File "$SKILL_DIR/scripts/init-feature.ps1" ...`.
+For shared helpers, use `hooks/lib/<name>.ps1` instead of `hooks/lib/<name>.sh`.
 
 ---
 
@@ -89,8 +94,8 @@ silently left half-done, because `build-summary.md` said "shipped" when the code
 
 1. Resolve the feature folder:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -105,8 +110,8 @@ silently left half-done, because `build-summary.md` said "shipped" when the code
 
 3. Run the pre-ship consistency check:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -123,8 +128,8 @@ silently left half-done, because `build-summary.md` said "shipped" when the code
 1. Use the `$FEATURE_DIR` resolved in Step 0 (re-resolve with the standard prelude).
 2. **Check for build summary first** (token-efficient path):
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -187,13 +192,13 @@ Create Architecture Decision Records in `docs/decisions/`:
 
 1. Create docs directory if needed:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
    mkdir -p "$PROJECT_ROOT/docs/decisions"
    ```
 
 2. Determine next ADR number:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
    NEXT=$(ls "$PROJECT_ROOT/docs/decisions/"*.md 2>/dev/null | wc -l)
    NEXT=$((NEXT + 1))
    PADDED=$(printf "%04d" "$NEXT")
@@ -302,7 +307,7 @@ Create Architecture Decision Records in `docs/decisions/`:
 
 1. Create or read `docs/architecture.md`:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
    touch "$PROJECT_ROOT/docs/architecture.md"
    ```
 
@@ -361,8 +366,8 @@ Write `decisions.md` inside the feature folder (if not already present from buil
 
 1. Rename folder to shipped:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -377,8 +382,8 @@ Write `decisions.md` inside the feature folder (if not already present from buil
 
 Run the index regeneration:
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SKILL_DIR="$PLUGIN_ROOT/skills/ship"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 bash "$SKILL_DIR/scripts/regenerate-index.sh" "$SHAPEUP_DIR"

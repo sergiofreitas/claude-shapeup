@@ -10,7 +10,7 @@
 
 INPUT=$(cat)
 PROMPT=$(echo "$INPUT" | jq -r '.prompt // empty')
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-.}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESOLVER="$HOOKS_DIR/lib/resolve-feature.sh"

@@ -1,11 +1,11 @@
 {
   "name": "shapeup",
-  "description": "Shape Up methodology skills for Claude Code — frame problems, shape solutions, build with hill charts, and ship with ADRs.",
+  "description": "Shape Up methodology skills for AI coding agents — frame problems, shape solutions, build with hill charts, and ship with ADRs. Includes Claude Code packaging and Codex skill wrappers.",
   "version": "1.3.1",
   "author": {
-    "name": "tiago-peixoto"
+    "name": "sergiofreitas"
   },
-  "homepage": "https://github.com/tiago-peixoto/claude-shapeup",
-  "repository": "https://github.com/tiago-peixoto/claude-shapeup",
+  "homepage": "https://github.com/sergiofreitas/claude-shapeup",
+  "repository": "https://github.com/sergiofreitas/claude-shapeup",
   "license": "MIT"
 }

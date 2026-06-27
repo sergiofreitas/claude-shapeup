@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shape Up Ship"
+  short_description: "Archive a build and capture decisions."
+  default_prompt: "Use $shapeup-ship to ship this completed Shape Up feature."

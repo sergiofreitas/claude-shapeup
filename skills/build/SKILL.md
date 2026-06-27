@@ -58,13 +58,13 @@ Your job:
 ## Paths and Variables
 
 Every bash snippet below assumes these shell variables are set at the **start of the
-snippet**. Each Claude Code Bash tool call runs in a fresh subprocess — shell state does
+snippet**. Each agent shell tool call may run in a fresh subprocess — shell state does
 NOT persist between calls — so every bash block that uses one of these must set it locally.
 
 - **`<project-root>`**: the user's working repository, where `.shapeup/` lives.
-  Resolves to `"${CLAUDE_PROJECT_DIR:-$(pwd)}"`.
+  Resolves to `"${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"`.
 - **`<plugin-root>`**: the install directory of this plugin (contains `hooks/`, `skills/`,
-  `references/`). Resolves to `"${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"`.
+  `references/`). Resolves to `"${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"`.
 - **`<skill-dir>`**: this skill's directory, equal to `$PLUGIN_ROOT/skills/build`.
 - **`<feature-dir>`** / **`$FEATURE_DIR`**: the resolved feature folder. Each bash block
   that uses it must re-run the resolver locally — do not rely on a variable set in a
@@ -75,13 +75,18 @@ NOT persist between calls — so every bash block that uses one of these must se
 Standard bash prelude — paste at the top of any snippet that needs these:
 
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SKILL_DIR="$PLUGIN_ROOT/skills/build"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 KEY="<feature key the user typed>"
 FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
 ```
+
+On Windows PowerShell, use the `.ps1` script beside each `.sh` script with the same
+arguments. Example: replace `bash "$SKILL_DIR/scripts/init-feature.sh" ...` with
+`powershell -NoProfile -ExecutionPolicy Bypass -File "$SKILL_DIR/scripts/init-feature.ps1" ...`.
+For shared helpers, use `hooks/lib/<name>.ps1` instead of `hooks/lib/<name>.sh`.
 
 ---
 
@@ -92,8 +97,8 @@ FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$
 Resolve the feature folder from the user's key (full date-slug, short slug, or legacy NNN):
 
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 KEY="<feature key the user typed>"
 FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -110,8 +115,8 @@ Check whether the feature is already completed or shipped:
 Then, check if this is a **first session** or a **continuation**:
 
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 KEY="<feature key the user typed>"
 FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -164,8 +169,8 @@ The subagent's job is to answer, with file_path:line_number citations:
 - Sanity-check your fixes with the consistency check. Every FAIL must be resolved (or
   explicitly explained in the handover) before continuing:
   ```bash
-  PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-  PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+  PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+  PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
   SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
   KEY="<feature key the user typed>"
   FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -182,8 +187,8 @@ Only after the audit and any corrections are applied do you resume or start work
 
 2. **Rename folder to building**:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -203,8 +208,8 @@ Only after the audit and any corrections are applied do you resume or start work
 
 5. **Create initial hill chart**:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SKILL_DIR="$PLUGIN_ROOT/skills/build"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
@@ -399,8 +404,8 @@ J. Commit. One commit per scope completion, bundling:
 **Self-audit invocation** (use after each scope's substep I, before substep J):
 
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 KEY="<feature key the user typed>"
 FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -441,8 +446,8 @@ If this is NOT the first session:
 
 1. **Check session budget**:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SKILL_DIR="$PLUGIN_ROOT/skills/build"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
@@ -476,8 +481,8 @@ Before shipping, check if the session budget allows for nice-to-have work:
 
 1. **Run the session budget script**:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SKILL_DIR="$PLUGIN_ROOT/skills/build"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
@@ -503,8 +508,8 @@ When the session must end with work remaining:
 
 1. **Determine handover number**:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -556,8 +561,8 @@ When the session must end with work remaining:
    audit finds drift.
 4. **Run the audit-mode consistency check**:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -586,8 +591,8 @@ When all must-haves are complete and all scopes are downhill or done:
 
 3. **Run the pre-ship consistency check** — this is a gate, not a suggestion:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")

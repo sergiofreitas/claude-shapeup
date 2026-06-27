@@ -52,13 +52,13 @@ stop and refocus on the problem. Framing answers "WHAT problem?" and "WHY now?" 
 ## Paths and Variables
 
 Every bash snippet below assumes these shell variables are set at the **start of the
-snippet**. Each Claude Code Bash tool call runs in a fresh subprocess — shell state does
+snippet**. Each agent shell tool call may run in a fresh subprocess — shell state does
 NOT persist between calls — so every bash block that uses one of these must set it locally.
 
 - **`<project-root>`**: the user's working repository, where `.shapeup/` lives.
-  Resolves to `"${CLAUDE_PROJECT_DIR:-$(pwd)}"`.
+  Resolves to `"${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"`.
 - **`<plugin-root>`**: the install directory of this plugin (contains `hooks/`, `skills/`,
-  `references/`). Resolves to `"${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"`.
+  `references/`). Resolves to `"${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"`.
 - **`<skill-dir>`**: this skill's directory, equal to `$PLUGIN_ROOT/skills/frame`.
 - **`<KEY>`** / **`$KEY`**: the feature key the user typed (date-slug, short slug, or
   legacy NNN).
@@ -66,11 +66,16 @@ NOT persist between calls — so every bash block that uses one of these must se
 Standard bash prelude — paste at the top of any snippet that needs these:
 
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SKILL_DIR="$PLUGIN_ROOT/skills/frame"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 ```
+
+On Windows PowerShell, use the `.ps1` script beside each `.sh` script with the same
+arguments. Example: replace `bash "$SKILL_DIR/scripts/init-feature.sh" ...` with
+`powershell -NoProfile -ExecutionPolicy Bypass -File "$SKILL_DIR/scripts/init-feature.ps1" ...`.
+For shared helpers, use `hooks/lib/<name>.ps1` instead of `hooks/lib/<name>.sh`.
 
 ---
 
@@ -81,13 +86,13 @@ SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 1. Identify the project workspace root (the folder the user selected or is working in)
 2. Check if `.shapeup/` exists at the project root; create it if needed:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
    mkdir -p "$PROJECT_ROOT/.shapeup"
    ```
 3. Create the feature folder by running:
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SKILL_DIR="$PLUGIN_ROOT/skills/frame"
    bash "$SKILL_DIR/scripts/init-feature.sh" "$PROJECT_ROOT/.shapeup" "<preliminary-slug>"
    ```

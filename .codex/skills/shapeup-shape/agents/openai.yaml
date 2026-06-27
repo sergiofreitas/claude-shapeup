@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shape Up Shape"
+  short_description: "Create a buildable Shape Up Package."
+  default_prompt: "Use $shapeup-shape to shape this Frame Go feature."

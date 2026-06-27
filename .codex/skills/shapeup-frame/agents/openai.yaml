@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shape Up Frame"
+  short_description: "Turn a raw idea into Frame Go."
+  default_prompt: "Use $shapeup-frame to frame this idea with Shape Up."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shape Up Build"
+  short_description: "Build with scopes and hill charts."
+  default_prompt: "Use $shapeup-build to build this Shape Go feature."

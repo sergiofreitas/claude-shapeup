@@ -59,13 +59,13 @@ handles token generation via `createToken()` on line 45; we'd extend it with a `
 ## Paths and Variables
 
 Every bash snippet below assumes these shell variables are set at the **start of the
-snippet**. Each Claude Code Bash tool call runs in a fresh subprocess — shell state does
+snippet**. Each agent shell tool call may run in a fresh subprocess — shell state does
 NOT persist between calls — so every bash block that uses one of these must set it locally.
 
 - **`<project-root>`**: the user's working repository, where `.shapeup/` lives.
-  Resolves to `"${CLAUDE_PROJECT_DIR:-$(pwd)}"`.
+  Resolves to `"${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"`.
 - **`<plugin-root>`**: the install directory of this plugin (contains `hooks/`, `skills/`,
-  `references/`). Resolves to `"${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"`.
+  `references/`). Resolves to `"${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"`.
 - **`<skill-dir>`**: this skill's directory, equal to `$PLUGIN_ROOT/skills/shape`.
 - **`<feature-dir>`** / **`$FEATURE_DIR`**: the resolved feature folder. Each bash block
   that uses it must re-run the resolver locally — do not rely on a variable set in a
@@ -76,13 +76,18 @@ NOT persist between calls — so every bash block that uses one of these must se
 Standard bash prelude — paste at the top of any snippet that needs these:
 
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SKILL_DIR="$PLUGIN_ROOT/skills/shape"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 KEY="<feature key the user typed>"
 FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
 ```
+
+On Windows PowerShell, use the `.ps1` script beside each `.sh` script with the same
+arguments. Example: replace `bash "$SKILL_DIR/scripts/init-feature.sh" ...` with
+`powershell -NoProfile -ExecutionPolicy Bypass -File "$SKILL_DIR/scripts/init-feature.ps1" ...`.
+For shared helpers, use `hooks/lib/<name>.ps1` instead of `hooks/lib/<name>.sh`.
 
 ---
 
@@ -96,8 +101,8 @@ solutions that contradict decisions already recorded.
 
 1. Resolve the feature folder from the user's key (set `KEY` to whatever the user typed):
    ```bash
-   PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+   PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+   PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
    SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
    KEY="<feature key the user typed>"
    FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
@@ -345,8 +350,8 @@ Every ⚠️ must become ✅ or be resolved through step 3. No ⚠️ elements c
 
 **Validate**: Run the validation script:
 ```bash
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
 SKILL_DIR="$PLUGIN_ROOT/skills/shape"
 SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
 KEY="<feature key the user typed>"
@@ -527,8 +532,8 @@ For Big Batch features, use the full template with affordance tables and fit che
 3. Based on response:
    - **Shape Go**: Before renaming, validate the package is clean:
      ```bash
-     PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-     PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+     PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+     PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
      SKILL_DIR="$PLUGIN_ROOT/skills/shape"
      SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
      KEY="<feature key the user typed>"
@@ -540,8 +545,8 @@ For Big Batch features, use the full template with affordance tables and fit che
 
      Then update `package.md` status to `Status: Shape Go — approved <date>` and rename:
      ```bash
-     PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-     PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find "$HOME/.claude" -type d -name shapeup-workflow 2>/dev/null | head -1)}"
+     PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
+     PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
      SHAPEUP_DIR="$PROJECT_ROOT/.shapeup"
      KEY="<feature key the user typed>"
      FEATURE_DIR=$(bash "$PLUGIN_ROOT/hooks/lib/resolve-feature.sh" "$SHAPEUP_DIR" "$KEY")
