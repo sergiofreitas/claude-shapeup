@@ -4,7 +4,7 @@
 
 ## Core Concepts
 
-**Appetite**: The number of sessions allocated to a project. NOT an estimate. A creative constraint that drives scope decisions. Sizes: Small Batch (1 session), Medium Batch (2-3 sessions), or Big Batch (4-5 sessions). A "session" is one focused AI-assisted work conversation.
+**Appetite**: The number of sessions allocated to a project. NOT an estimate. A creative constraint that drives scope decisions. Sizes: Small Batch (1 session), Medium Batch (2-3 sessions), or Big Batch (4-5 sessions). A "session" is one focused AI-assisted work conversation. The package also records a separate USD cost budget for spend tracking; do not confuse cost with scope or timeline.
 
 **Baseline**: What customers currently do without the feature being built. The comparison point for judging "good enough."
 
@@ -19,6 +19,8 @@
 **Candidate**: A raw request or idea that hasn't been framed yet. The starting state in the pipeline.
 
 **Circuit Breaker**: Default policy: if a project doesn't ship within the allocated sessions, it is cancelled (not extended). Prevents runaway projects.
+
+**Cost Tracking (USD)**: Package-level budget metadata with estimated cost recorded during shaping and actual cost recorded after building. Source-agnostic: use whatever billing, invoice, model dashboard, or human-provided spend data is available; never fabricate a number.
 
 **De-Risk**: The process of removing rabbit holes and unknowns from shaped work to improve odds of shipping within the allocated sessions.
 
@@ -48,7 +50,7 @@
 
 **No-Go**: An explicit exclusion stated in the pitch. Functionality deliberately NOT included.
 
-**Package**: The evolved term for "Pitch." A document with five ingredients (Problem, Appetite, Solution, Rabbit Holes, No-Gos) presented at the betting table. Called "Package" because the business already bought in during framing — this isn't a sales pitch, it's a complete bundle of all project variables.
+**Package**: The evolved term for "Pitch." A document with five Shape Up ingredients (Problem, Appetite, Solution, Rabbit Holes, No-Gos) plus required tracking metadata, including estimated and actual USD cost. Called "Package" because the business already bought in during framing — this isn't a sales pitch, it's a complete bundle of all project variables.
 
 **Pitch** (legacy term): See **Package**. The original book used "Pitch" but Ryan Singer later noted that "pitching" better describes the input to framing (advocating a problem deserves attention), not the output of shaping.
 

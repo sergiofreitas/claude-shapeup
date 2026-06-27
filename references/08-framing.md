@@ -171,6 +171,9 @@ When an agent receives a raw idea or feature request:
 ## Appetite
 [Small Batch (1 session) / Medium Batch (2-3 sessions) / Big Batch (4-5 sessions)]
 
+## Cost Expectation (USD)
+[Stakeholder ceiling/target if known, or `Not set during framing`]
+
 ## Frame Statement
 "If we can shape this into something doable and execute within [N sessions], it will [specific business outcome]."
 
@@ -182,6 +185,6 @@ When an agent receives a raw idea or feature request:
 ## Relationship to Other Documents
 
 - After **Frame Go**, proceed to the shaping process described in `01-shaping-process.md`
-- The shaping output is now called a **Package** (not a Pitch) — see `03-pitch-template.md` for the format (the five ingredients remain the same)
+- The shaping output is now called a **Package** (not a Pitch) — see `03-pitch-template.md` for the format. The five Shape Up ingredients remain the same; Cost Tracking is required metadata.
 - Framing failure modes are covered in `07-pitfalls.md` (Pitfall #2: Blurred framing and shaping)
 - The full agent workflow incorporating framing is in `06-agent-workflow-guide.md`

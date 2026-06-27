@@ -139,7 +139,7 @@ solutions that contradict decisions already recorded.
 2. **Validate Frame Go**: Check that `frame.md` contains `Status: Frame Go`.
    If not approved, tell the user: "This frame hasn't been approved yet. Run `/frame` to complete framing first."
    STOP — do not proceed without Frame Go.
-3. Extract: problem statement, affected segment, appetite, business value
+3. Extract: problem statement, affected segment, appetite, business value, and any cost expectation
 
 4. Set up TodoWrite to track progress:
    - Verifying prior state (subagent audit)
@@ -149,6 +149,7 @@ solutions that contradict decisions already recorded.
    - Designing solution elements + affordance tables
    - Running fit check (R × Solution)
    - De-risking (resolving ⚠️ flags, patching rabbit holes)
+   - Estimating package cost in USD
    - Producing Package document
    - Presenting for Shape Go
 
@@ -362,6 +363,8 @@ If any TBD/TODO/FIXME strings remain, resolve them before proceeding.
 
 ### Step 7: Produce Package Document
 
+Before writing the Package, estimate **Cost Tracking (USD)**. Use an agnostic basis: known AI billing rates, expected model/tool spend, cloud/SaaS charges, contractor time converted to dollars, or a stakeholder-provided budget. Record the source/assumption. If no basis exists, ask the user for a ceiling or estimate; if still unknown, use `Estimated | Unknown | No cost basis available during shaping` and flag it as a Shape Go discussion point. Do not fabricate a dollar amount.
+
 Write the Package to `<feature-dir>/package.md` — using the `$FEATURE_DIR` resolved in Step 0.
 
 **Choose the template based on appetite.** Medium Batch (2-3 sessions) uses the Big Batch template.
@@ -381,6 +384,13 @@ simpler changes table, but the fit check is kept inline to catch solution gaps.
 **Status**: Shaping
 
 ---
+
+## Cost Tracking (USD)
+
+| Metric | Amount | Source / Notes |
+|--------|--------|----------------|
+| Estimated | $<amount or Unknown> | <basis for estimate or missing source> |
+| Actual | Pending build | Fill in build-summary.md when Ready to Ship |
 
 ## Problem
 
@@ -445,6 +455,13 @@ For Big Batch features, use the full template with affordance tables and fit che
 ## Appetite
 
 <Small Batch (1 session) / Medium Batch (2-3 sessions) / Big Batch (4-5 sessions)>
+
+## Cost Tracking (USD)
+
+| Metric | Amount | Source / Notes |
+|--------|--------|----------------|
+| Estimated | $<amount or Unknown> | <basis for estimate or missing source> |
+| Actual | Pending build | Fill in build-summary.md when Ready to Ship |
 
 ## Requirements (R)
 

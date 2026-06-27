@@ -16,7 +16,7 @@ if ($text -match '(?i)(^|[^a-zA-Z])(TBD|TODO|FIXME)([^a-zA-Z]|$)') {
   $issues++
 }
 $isSmall = $text -match 'Small Batch'
-foreach ($section in @('## Problem','## Rabbit Holes','## No-Gos')) {
+foreach ($section in @('## Problem','## Cost Tracking (USD)','## Rabbit Holes','## No-Gos')) {
   if ($text -notmatch [regex]::Escape($section)) { Write-Output "MISSING SECTION: $section"; $issues++ }
 }
 if ($isSmall) {
@@ -31,6 +31,12 @@ if ($isSmall) {
     if ($text -notmatch [regex]::Escape($section)) { Write-Output "MISSING SECTION: $section"; $issues++ }
   }
   if ($text -notmatch [regex]::Escape('### Element:')) { Write-Output 'WARNING: No solution elements defined (### Element:)'; $issues++ }
+}
+$costMatch = [regex]::Match($text, '(?ms)^## Cost Tracking \(USD\)\s*(.*?)(?=^## |\z)')
+if ($costMatch.Success) {
+  $costBlock = $costMatch.Groups[1].Value
+  if ($costBlock -notmatch '(?i)Estimated') { Write-Output 'MISSING COST ESTIMATE: Cost Tracking (USD) must include Estimated'; $issues++ }
+  elseif ($costBlock -notmatch '(?i)Estimated.*(\$[0-9]|Unknown)') { Write-Output 'INVALID COST ESTIMATE: Estimated must be a USD amount (e.g. $120) or Unknown with notes'; $issues++ }
 }
 if ($text -match '⚠️') {
   Write-Output 'UNRESOLVED FLAGGED UNKNOWNS (⚠️) FOUND:'

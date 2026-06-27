@@ -8,7 +8,7 @@
 
 ## Structure
 
-Every package must contain exactly five ingredients. No more, no less.
+Every package must contain the five Shape Up ingredients, plus the required Cost Tracking metadata block. Cost is tracking metadata, not a sixth Shape Up ingredient.
 
 ---
 
@@ -49,6 +49,29 @@ This causes [specific negative outcome]. Currently [X users / Y% of cases] exper
 **Example format**:
 ```
 Appetite: [Small Batch — 1 session] or [Medium Batch — 2-3 sessions] or [Big Batch — 4-5 sessions]
+```
+
+---
+
+## Cost Tracking (USD)
+
+**What it is**: A source-agnostic budget record for the package. It tracks dollars spent to build the package, regardless of whether the source is AI token billing, SaaS invoices, cloud usage, contractor time converted to dollars, or a human-provided budget.
+
+**Requirements**:
+- Record **Estimated** cost during shaping before Shape Go
+- Record **Actual** cost after build completes, usually in `build-summary.md` and `decisions.md`
+- Use USD and include the source or assumption behind the number
+- If actual spend is not available, write `Unknown` with the missing source; do not invent a value
+- Keep cost separate from appetite: appetite controls sessions and scope; cost tracks spend
+
+**Example format**:
+```markdown
+## Cost Tracking (USD)
+
+| Metric | Amount | Source / Notes |
+|--------|--------|----------------|
+| Estimated | $120 | Shaping estimate based on 3 AI build sessions at $40/session |
+| Actual | Pending build | Fill in from billing/export when Ready to Ship |
 ```
 
 ---
@@ -129,6 +152,7 @@ For AI agents evaluating whether a pitch is ready for the betting table:
 ### Completeness
 - [ ] Problem is specific and story-based (not generic)
 - [ ] Appetite is explicitly stated
+- [ ] Cost Tracking (USD) exists with an Estimated USD amount or explicit Unknown with source notes
 - [ ] Solution describes concrete elements (not vague features)
 - [ ] Rabbit holes are identified and addressed
 - [ ] No-gos define clear boundaries
@@ -145,6 +169,7 @@ For AI agents evaluating whether a pitch is ready for the betting table:
 ### Betting Table Questions
 - [ ] Does the problem matter enough to spend [appetite] on?
 - [ ] Is the appetite right for this problem?
+- [ ] Is the estimated cost acceptable for the expected business value?
 - [ ] Is the solution attractive given the constraints?
 - [ ] Is this the right time to build this?
 - [ ] Are the right people available?
@@ -161,6 +186,13 @@ For AI agents evaluating whether a pitch is ready for the betting table:
 
 ## Appetite
 [Small Batch — 1 session] or [Medium Batch — 2-3 sessions] or [Big Batch — 4-5 sessions]
+
+## Cost Tracking (USD)
+
+| Metric | Amount | Source / Notes |
+|--------|--------|----------------|
+| Estimated | $<amount> | <basis for estimate> |
+| Actual | Pending build | Fill after build completes |
 
 ## Solution
 [Description of key elements with annotated sketches]

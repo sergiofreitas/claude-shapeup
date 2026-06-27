@@ -41,8 +41,9 @@ Your job:
 2. Guide the user through structured Q&A to narrow the problem
 3. Quantify who's affected and why it matters to the business
 4. Set the appetite (time budget)
-5. Produce a Frame document
-6. Present it for **Frame Go** approval
+5. Capture any explicit cost expectation or ceiling in USD, if the stakeholder has one
+6. Produce a Frame document
+7. Present it for **Frame Go** approval
 
 **Critical rule**: Never propose solutions during framing. If you catch yourself designing,
 stop and refocus on the problem. Framing answers "WHAT problem?" and "WHY now?" — never "HOW to solve it."
@@ -112,6 +113,7 @@ For shared helpers, use `hooks/lib/<name>.ps1` instead of `hooks/lib/<name>.sh`.
    - Analyzing affected segment
    - Evaluating business value
    - Setting appetite
+   - Capturing cost expectation, if any
    - Producing Frame document
    - Presenting for Frame Go
 
@@ -171,12 +173,13 @@ This establishes the pain, frequency, impact, and baseline — solutions come la
   - Quality of life (team morale, reduced frustration)
 - "Is there urgency? What's competing for attention right now?"
 
-**Round 4 — Appetite** (1 question):
+**Round 4 — Appetite and Cost** (1-2 questions):
 - "How many sessions does this deserve?" with options:
   - Small Batch: 1 session (quick win, contained scope)
   - Medium Batch: 2-3 sessions (moderate scope, clear boundaries)
   - Big Batch: 4-5 sessions (significant feature, cross-cutting change)
   - Not sure yet (help me think through it)
+- "Is there a USD cost ceiling or target we should respect?" If the user does not know, record `Cost expectation: Not set during framing` rather than blocking.
 
 **Grab-bag check**: If the idea sounds like "redesign X" or "X 2.0" without a single specific
 problem, challenge it. Use AskUserQuestion:
@@ -218,6 +221,10 @@ user quotes, frequency of occurrence. If no hard data, state assumptions explici
 ## Appetite
 
 <Small Batch (1 session) / Medium Batch (2-3 sessions) / Big Batch (4-5 sessions)>
+
+## Cost Expectation (USD)
+
+<Stakeholder ceiling/target if known, or `Not set during framing`>
 
 ## Frame Statement
 

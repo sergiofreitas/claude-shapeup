@@ -183,7 +183,7 @@ Only after the audit and any corrections are applied do you resume or start work
 
 1. **Load Package**: Read `package.md` from the `$FEATURE_DIR` you resolved in Step 0.
    - Validate `Status: Shape Go` exists. If not, tell user to run `/shape` first.
-   - Extract: problem, appetite, elements, rabbit holes, no-gos
+   - Extract: problem, appetite, cost estimate, elements, rabbit holes, no-gos
 
 2. **Rename folder to building**:
    ```bash
@@ -604,7 +604,7 @@ When all must-haves are complete and all scopes are downhill or done:
    behaviors that you've decided not to ship by prefixing with `~`, or update hill positions)
    — do NOT edit the script to silence it. Re-run until it exits 0.
 
-4. **Write build summary** for the ship phase.
+4. **Write build summary** for the ship phase. Before writing it, determine actual USD cost from the available source of truth (AI billing dashboard/export, cloud/SaaS invoice, time-cost conversion, or user-provided amount). If unavailable, ask the user. If still unavailable, write `Unknown` and name the missing source; never invent a number.
    This is the builder's raw notes — ship uses it as *input* (alongside `frame.md` and `package.md`)
    to produce the formal `decisions.md`. Keep it factual; ship handles the analysis.
    Write `$FEATURE_DIR/build-summary.md` (resolve `$FEATURE_DIR` per the standard prelude):
@@ -614,6 +614,14 @@ When all must-haves are complete and all scopes are downhill or done:
    **Feature ID**: <NNN>
    **Build sessions**: <how many>
    **Date completed**: <date>
+
+   ## Cost Tracking (USD)
+
+   | Metric | Amount | Source / Notes |
+   |--------|--------|----------------|
+   | Estimated | <estimated USD amount or Unknown from package.md> | <copied estimate basis> |
+   | Actual | <actual USD amount or Unknown> | <billing/export/user source; if Unknown, state missing source> |
+   | Delta | <actual minus estimated, or Unknown> | <why it changed> |
 
    ## What Was Built
    - <Bullet list of implemented functionality>

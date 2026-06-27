@@ -26,7 +26,7 @@ if grep -q "Small Batch" "$PACKAGE"; then
 fi
 
 # Check required sections (common to both templates)
-for section in "## Problem" "## Rabbit Holes" "## No-Gos"; do
+for section in "## Problem" "## Cost Tracking (USD)" "## Rabbit Holes" "## No-Gos"; do
   if ! grep -q "$section" "$PACKAGE"; then
     echo "MISSING SECTION: $section"
     ISSUES=$((ISSUES + 1))
@@ -55,6 +55,18 @@ else
   done
   if ! grep -q "### Element:" "$PACKAGE"; then
     echo "WARNING: No solution elements defined (### Element:)"
+    ISSUES=$((ISSUES + 1))
+  fi
+fi
+
+# Cost Tracking must include an estimated USD amount or an explicit Unknown with source gap.
+if grep -q "## Cost Tracking (USD)" "$PACKAGE"; then
+  COST_BLOCK=$(awk '/^## Cost Tracking \(USD\)/{in_cost=1; next} /^## / && in_cost{in_cost=0} in_cost{print}' "$PACKAGE")
+  if ! echo "$COST_BLOCK" | grep -qi 'Estimated'; then
+    echo "MISSING COST ESTIMATE: Cost Tracking (USD) must include Estimated"
+    ISSUES=$((ISSUES + 1))
+  elif ! echo "$COST_BLOCK" | grep -qiE 'Estimated.*(\$[0-9]|Unknown)'; then
+    echo "INVALID COST ESTIMATE: Estimated must be a USD amount (e.g. \$120) or Unknown with notes"
     ISSUES=$((ISSUES + 1))
   fi
 fi

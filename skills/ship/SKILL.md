@@ -136,7 +136,7 @@ silently left half-done, because `build-summary.md` said "shipped" when the code
    cat "$FEATURE_DIR/build-summary.md" 2>/dev/null
    ```
    - **If `build-summary.md` exists**: Read it + `frame.md` + `package.md`.
-     The build summary contains cuts, files changed, and lessons learned.
+     The build summary contains cuts, files changed, actual cost, and lessons learned.
      The package is needed to compare what was planned vs what was built for ADRs.
      Skip handovers, scopes, and hillchart — the summary covers them.
    - **If `build-summary.md` does NOT exist** (older features): Fall back to reading all:
@@ -162,6 +162,12 @@ If `decisions.md` already exists from the build phase, read it first. Use it as 
 point — only ask interactive questions to fill gaps, not to recreate work already captured.
 
 Go through the feature artifacts and identify:
+
+**Cost Tracking**
+- Copy estimated USD cost from `package.md`
+- Copy actual USD cost from `build-summary.md` when present
+- If actual cost is missing, ask the user or record `Unknown` with the missing source
+- Preserve delta/notes in `decisions.md` so future packages can calibrate estimates
 
 **A. Architectural Choices**
 - What technical approach was chosen? (from package.md elements)
@@ -347,6 +353,8 @@ Write `decisions.md` inside the feature folder (if not already present from buil
 **Shipped**: <date>
 **Appetite**: <what was allocated>
 **Actual effort**: <how many build sessions>
+**Estimated cost (USD)**: <from package.md>
+**Actual cost (USD)**: <from build-summary.md, or Unknown with source gap>
 
 ## Key Architectural Decisions
 - <Decision>: <Brief rationale>

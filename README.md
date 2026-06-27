@@ -13,8 +13,8 @@ Backlogs are where ideas go to die. Shape Up replaces the infinite todo list wit
 | Skill | What it does | Gate |
 |-------|-------------|------|
 | `/shapeup:frame` | Turns a vague idea into a locked problem statement with appetite | Frame Go |
-| `/shapeup:shape` | Deep codebase analysis → requirements, affordance tables, fit check matrix, Package | Shape Go |
-| `/shapeup:build` | TDD via RED/GREEN behavioral tests, hill charts, scope hammering, handovers for multi-session work | Ready to Ship |
+| `/shapeup:shape` | Deep codebase analysis → requirements, affordance tables, fit check matrix, Package with USD cost estimate | Shape Go |
+| `/shapeup:build` | TDD via RED/GREEN behavioral tests, hill charts, scope hammering, handovers, actual USD cost tracking | Ready to Ship |
 | `/shapeup:ship` | Extracts ADRs, updates architecture docs, archives the feature folder | Done |
 
 Each skill is self-contained with its own reference docs — no external dependencies, no magic.

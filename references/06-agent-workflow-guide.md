@@ -37,6 +37,7 @@ PIPELINE: Candidate → Frame Go → Shape Go → Bet → Build → Ship
    → Evaluate: Does this align with current priorities? Is now the right time?
    → Narrow: From generic request → specific, observable pain point
    → Set appetite: Small Batch (1 session) / Medium Batch (2-3 sessions) / Big Batch (4-5 sessions)
+   → Capture initial cost expectation if the stakeholder has one; shaping will turn it into a USD estimate
    → Reject grab-bags: No "redesign X" without a single defined problem
    → Produce Frame document (see template in 08-framing.md)
    → CHECKPOINT: Present to human. "Is this worth investing shaping time in?"
@@ -59,7 +60,7 @@ PIPELINE: Candidate → Frame Go → Shape Go → Bet → Build → Ship
 
 5. PACKAGE (evolved term for "Pitch")
    → Write document with 5 ingredients:
-     Problem | Appetite | Solution | Rabbit Holes | No-Gos
+     Problem | Appetite | Cost Tracking (USD) | Solution | Rabbit Holes | No-Gos
    → This is not a sales pitch — business already bought in at Frame Go
    → This is a complete package of all project variables
    → Submit to Betting Table for final approval
@@ -183,6 +184,7 @@ Never let reactive work silently consume session time. If it's eating into the b
 12. **Never shape before framing.** Lock the problem before designing the solution. Candidate → Frame Go → Shape Go.
 13. **Never leave rabbit holes as TBD.** Every unresolved rabbit hole detonates during build. Patch, cut, or declare out of bounds.
 14. **Never mix reactive work into build sessions.** Bugs, incidents, and third-party-dependent work are separate streams with separate tracking.
+15. **Never fabricate cost.** Estimated and actual USD values must cite their source or assumption; write Unknown when data is unavailable.
 
 ---
 
@@ -195,6 +197,7 @@ PACKAGE: [Project Name]
 PROBLEM: [One-sentence pain point]
 SEGMENT: [Who's affected, how many, business value]
 APPETITE: [Small Batch 1 session / Medium Batch 2-3 sessions / Big Batch 4-5 sessions]
+COST: Estimated $[amount] / Actual $[amount or Pending build]
 SOLUTION: [Key elements, 2-3 sentences — wiring, not styling]
 RISKS ADDRESSED: [How rabbit holes were handled — zero TBDs]
 EXCLUDED: [What's NOT included]
