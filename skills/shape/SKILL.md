@@ -21,6 +21,8 @@ Shaping designs a technical solution for a framed problem, de-risks it, and prod
 > |------|----------|-------------|
 > | `../../references/01-shaping-process.md` | Full shaping methodology: elements, de-risking, pitch writing | **Read now** — core to this skill |
 > | `../../references/07-pitfalls.md` | Three critical failure modes (undershaped work, blurred framing/shaping, mixed work) | **Read now** — Pitfall #1 (undershaped work) is the #1 shaping failure |
+> | `../../references/09-stack-skills-and-validation.md` | Stack-specific skill overlays and isolated validation agent protocol | **Read now** — shaping must apply stack risk checks before Shape Go |
+> | `../../references/10-technical-principles.md` | YAGNI, DRY, KISS, and TDD guidance for technical shaping and build validation | **Read now** — constrains solution design and test strategy |
 > | `../../references/03-pitch-template.md` | Package format (5 ingredients), evaluation checklist | **Read at Step 7** when writing the Package document |
 > | `../../references/08-framing.md` | Framing methodology, frame template | Read when validating the Frame Go status in Step 1 |
 > | `../../references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
@@ -46,9 +48,10 @@ Your job:
 4. Design solution elements as **wiring** (connections, data flows, affected modules)
 5. Build **Affordance Tables** (UI + Code affordances with wiring)
 6. Run a **Fit Check** — R × Solution matrix, binary ✅/❌
-7. De-risk: resolve all flagged unknowns (⚠️), patch rabbit holes, zero TBDs
-8. Produce a Package document
-9. Present it for **Shape Go** approval
+7. Apply YAGNI, DRY, KISS, and TDD to keep the solution minimal, simple, non-duplicative, and testable
+8. De-risk: resolve all flagged unknowns (⚠️), patch rabbit holes, zero TBDs
+9. Produce a Package document
+10. Present it for **Shape Go** approval
 
 **Critical rule**: Every element must be traceable to actual code, data models, or architecture.
 "We can probably use the existing auth library" is NOT valid. "The `AuthService` class in `src/auth/service.ts`
@@ -141,9 +144,14 @@ solutions that contradict decisions already recorded.
    STOP — do not proceed without Frame Go.
 3. Extract: problem statement, affected segment, appetite, business value, and any cost expectation
 
-4. Set up TodoWrite to track progress:
+4. Detect applicable stack skills using `09-stack-skills-and-validation.md`. Load only stack skills
+   that clearly apply, and use their Shape guidance during codebase analysis, fit checks, and de-risking.
+
+5. Set up TodoWrite to track progress:
    - Verifying prior state (subagent audit)
    - Loading frame and validating approval
+   - Detecting applicable stack skills
+   - Applying YAGNI/DRY/KISS/TDD technical principles
    - Extracting requirements (R)
    - Analyzing codebase (technical depth)
    - Designing solution elements + affordance tables
@@ -207,7 +215,17 @@ This is the most critical step. Undershaped work is the #1 failure mode.
    - Test files to understand existing patterns
    - Configuration files that may constrain the solution
 
-3. **Map the wiring**: Document what you find:
+3. **Apply stack skill guidance**: For every active stack skill, check its Shape guidance and
+   Validation Checklist for framework-specific architecture, migration, runtime, security, and test
+   risks. Add any unresolved concerns to the Step 6 de-risking list.
+
+4. **Apply technical principles** from `10-technical-principles.md`:
+   - YAGNI: exclude speculative capabilities as No-Gos or nice-to-haves.
+   - DRY: identify shared domain rules that must stay consistent, without inventing premature abstractions.
+   - KISS: prefer the simplest viable wiring inside the appetite.
+   - TDD: define how builders will prove each behavior, especially the first core/small/novel slice.
+
+5. **Map the wiring**: Document what you find:
    - Which modules will be affected?
    - What data flows will change?
    - What existing patterns should be followed?
@@ -428,6 +446,8 @@ simpler changes table, but the fit check is kept inline to catch solution gaps.
 **Key files reviewed**: <list>
 **Approach validated**: <summary of feasibility confirmation>
 **Test strategy**: <TDD approach>
+**Technical principles**: <YAGNI/DRY/KISS/TDD decisions that shaped scope, simplicity, duplication, and tests>
+**Stack skills applied**: <list active stack skills, or `none detected`>
 
 ---
 
@@ -529,16 +549,26 @@ For Big Batch features, use the full template with affordance tables and fit che
 **Approach validated**: <summary of technical feasibility confirmation>
 **Flagged unknowns resolved**: <all ⚠️ → ✅ or cut>
 **Test strategy**: <how the solution will be tested — TDD approach>
+**Technical principles**: <YAGNI/DRY/KISS/TDD decisions that shaped scope, simplicity, duplication, and tests>
+**Stack skills applied**: <list active stack skills, or `none detected`>
 
 ---
 
 ## Status: Shaping
 ```
 
-### Step 8: Present and Gate (Shape Go)
+### Step 8: Validate, Present, and Gate (Shape Go)
 
-1. Display the Package document to the user
-2. Use **AskUserQuestion** for Shape Go:
+1. Dispatch an isolated validation agent using the contract in `09-stack-skills-and-validation.md`.
+   Ask it to review `package.md`, active stack-skill checklists, and relevant code references for:
+   Frame Go status, requirements coverage, codebase-grounded wiring, fit-check completeness, stack-specific
+   de-risking, YAGNI/DRY/KISS/TDD compliance, zero TBDs/unknowns, and cost estimate source.
+2. Apply the validation report before showing the Package:
+   - `FAIL`: fix the Package or re-run de-risking, then validate again.
+   - `PASS WITH WARNINGS`: document the warning as a Shape Go discussion point.
+   - `PASS`: continue.
+3. Display the Package document to the user
+4. Use **AskUserQuestion** for Shape Go:
    - Question: "Is the technical solution viable? Are all unknowns resolved?"
    - Options:
      - "Shape Go — Solution is solid, ready to build"
@@ -546,7 +576,7 @@ For Big Batch features, use the full template with affordance tables and fit che
      - "Back to framing — Problem needs reframing"
      - "Discard — Not feasible within appetite"
 
-3. Based on response:
+5. Based on response:
    - **Shape Go**: Before renaming, validate the package is clean:
      ```bash
      PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
