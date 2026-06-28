@@ -24,6 +24,8 @@
 
 **De-Risk**: The process of removing rabbit holes and unknowns from shaped work to improve odds of shipping within the allocated sessions.
 
+**DRY**: "Don't Repeat Yourself." Avoid duplicated domain rules or integration logic; extract abstractions only when repeated code carries the same meaning.
+
 **Discovered Tasks**: Tasks the team finds only after starting real work. These make up the true bulk of any project.
 
 **Downhill**: The execution phase of work where all unknowns are solved and only implementation remains.
@@ -43,6 +45,8 @@
 **Imagined Tasks**: Tasks the team thinks they need based on thinking about the project, before doing real work. Often inaccurate.
 
 **Layer Cake**: A scope with evenly distributed UI and backend work. Can be estimated by UI surface area.
+
+**KISS**: "Keep It Simple, Stupid." Prefer the simplest understandable approach that satisfies the current requirements and fits the codebase.
 
 **Nice-to-Have**: A behavior marked with `~` prefix (e.g. `- [RED] ~ ...`). Carries RED/GREEN state like any behavior. Done only if time permits; cut without guilt if not.
 
@@ -66,13 +70,21 @@
 
 **Shaping**: The process of making a framed problem concrete by defining key elements, technical wiring, and risks. Happens AFTER framing. Produces a Package.
 
+**Stack Skill**: An optional, stack-specific instruction overlay (for example Next.js, Playwright, Prisma ORM) that adds framework conventions, risk checks, and validation expectations without changing the Shape Up phase boundaries.
+
+**Validation Agent**: An isolated, read-only reviewer agent used before phase gates to check artifacts and implementation claims. It reports PASS / PASS WITH WARNINGS / FAIL findings; the phase agent applies any fixes.
+
 **Small Batch**: A single-session project. Quick wins and contained scope.
+
+**TDD**: Test-Driven Development. Write a failing test for the intended behavior, implement the smallest change that passes it, and keep regression tests green.
 
 **Medium Batch**: A 2-3 session project. Moderate scope with clear boundaries.
 
 **Big Batch**: A 4-5 session project. Significant features or cross-cutting changes.
 
 **Uphill**: The phase of work where unknowns and unsolved problems remain. Requires investigation and problem-solving.
+
+**YAGNI**: "You Aren't Gonna Need It." Do not shape or build speculative capabilities before a framed problem, appetite, or must-have behavior requires them.
 
 ## Shaping Properties
 

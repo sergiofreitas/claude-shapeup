@@ -14,6 +14,7 @@
 | **Builder (Designer)** | Design Agent | Creates affordances, UI structure, interaction flows. Works at breadboard level first, refines later. |
 | **Builder (Programmer)** | Coding Agent | Implements backend, wires affordances, deploys. Builds strategically patchy scaffolding. |
 | **QA** | Verification Agent | Finds edge cases in completed scopes. All findings are nice-to-haves by default. |
+| **Gate Validator** | Isolated Validation Agent | Reviews each phase artifact before Frame Go, Shape Go, Ready to Ship, and Ship archival. Read-only; reports PASS / PASS WITH WARNINGS / FAIL. |
 
 ---
 
@@ -32,6 +33,7 @@ PIPELINE: Candidate → Frame Go → Shape Go → Bet → Build → Ship
    Status: CANDIDATE
 
 2. FRAME (problem + business value, NOT solution) — See 08-framing.md
+   → Detect applicable stack skills (see 09-stack-skills-and-validation.md)
    → Investigate: What's the actual pain point? Who's affected? What segment?
    → Quantify: How many users, how often, what revenue/retention impact?
    → Evaluate: Does this align with current priorities? Is now the right time?
@@ -40,10 +42,13 @@ PIPELINE: Candidate → Frame Go → Shape Go → Bet → Build → Ship
    → Capture initial cost expectation if the stakeholder has one; shaping will turn it into a USD estimate
    → Reject grab-bags: No "redesign X" without a single defined problem
    → Produce Frame document (see template in 08-framing.md)
+   → VALIDATE: isolated validation agent checks the Frame before Frame Go
    → CHECKPOINT: Present to human. "Is this worth investing shaping time in?"
    Status: FRAME GO
 
 3. ELEMENTS (with technical depth)
+   → Load applicable stack skills and their Shape guidance
+   → Apply YAGNI, DRY, KISS, and TDD guidance (see 10-technical-principles.md)
    → Breadboard: Define places, affordances, connections (for flows)
    → Fat marker: Rough spatial layout (for visual problems)
    → Output: Wiring — how things connect, what data flows where, what code is affected
@@ -51,11 +56,13 @@ PIPELINE: Candidate → Frame Go → Shape Go → Bet → Build → Ship
 
 4. DE-RISK (zero TBDs allowed)
    → Review actual codebase, data models, existing architecture
+   → Apply stack-skill risk checks for frameworks, ORMs, test tools, deployment, and runtime
    → Walk through use case step by step
    → For each element: Is it technically feasible IN THE APPETITE?
    → Apply: Declare out of bounds / Cut back / Patch holes
    → Every rabbit hole must have a resolution. Unresolved = time bomb.
    → CHECKPOINT: Could a builder pick this up and know what to do?
+   → VALIDATE: isolated validation agent checks package coverage and stack-specific de-risking
    Status: SHAPE GO
 
 5. PACKAGE (evolved term for "Pitch")
@@ -73,6 +80,8 @@ PIPELINE: Candidate → Frame Go → Shape Go → Bet → Build → Ship
 ```
 SESSION 1: ORIENT + FIRST PIECE
 ├── Study package, explore codebase, identify approach
+├── Load applicable stack skills for implementation and verification guidance
+├── Apply YAGNI, DRY, KISS, and TDD as technical constraints
 ├── Pick first piece (core + small + novel)
 ├── Integrate first piece vertically (UI + backend)
 └── Milestone: One clickable, working piece
@@ -94,6 +103,7 @@ FINAL SESSION: CONVERGE + SHIP
 ├── All scopes should be downhill
 ├── Scope hammer aggressively: cut anything not must-have
 ├── Compare to baseline: is this better than what exists?
+├── Validate via isolated agent before Ready to Ship
 ├── Deploy
 └── Do not commit to post-ship feedback
 ```
@@ -185,6 +195,9 @@ Never let reactive work silently consume session time. If it's eating into the b
 13. **Never leave rabbit holes as TBD.** Every unresolved rabbit hole detonates during build. Patch, cut, or declare out of bounds.
 14. **Never mix reactive work into build sessions.** Bugs, incidents, and third-party-dependent work are separate streams with separate tracking.
 15. **Never fabricate cost.** Estimated and actual USD values must cite their source or assumption; write Unknown when data is unavailable.
+16. **Use stack skills as overlays, not replacements.** Stack-specific guidance adds checks and conventions but never changes phase boundaries.
+17. **Validate gates independently.** Before every phase gate, use an isolated read-only validation agent and apply FAIL findings before proceeding.
+18. **Keep technical work disciplined.** Apply YAGNI, DRY, KISS, and TDD during shaping, building, and validation.
 
 ---
 

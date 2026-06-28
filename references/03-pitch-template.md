@@ -87,6 +87,7 @@ Appetite: [Small Batch — 1 session] or [Medium Batch — 2-3 sessions] or [Big
 - Show where new elements fit in the existing system
 - Include enough detail for the team to understand the approach
 - Leave enough ambiguity for the team to make execution decisions
+- Apply YAGNI, DRY, KISS, and TDD: no speculative capabilities, no premature abstractions, simplest viable wiring, clear test strategy
 
 **Visualization rules**:
 - Place new elements in context of existing UI
@@ -165,6 +166,7 @@ For AI agents evaluating whether a pitch is ready for the betting table:
 - [ ] Solution is bounded (clear limits on scope)
 - [ ] Rabbit holes have been de-risked (patched, cut, or declared out of bounds)
 - [ ] Technical feasibility validated within appetite
+- [ ] YAGNI/DRY/KISS/TDD decisions are explicit in Technical Validation
 
 ### Betting Table Questions
 - [ ] Does the problem matter enough to spend [appetite] on?
@@ -210,4 +212,8 @@ For AI agents evaluating whether a pitch is ready for the betting table:
 ## No-Gos
 - [Exclusion]: [Reason]
 - [Exclusion]: [Reason]
+
+## Technical Validation
+**Technical principles**: [YAGNI/DRY/KISS/TDD decisions]
+**Test strategy**: [How builders will prove behavior]
 ```
