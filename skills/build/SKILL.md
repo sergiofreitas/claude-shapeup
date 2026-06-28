@@ -21,6 +21,8 @@ Building turns a shaped Package into deployed software within a fixed appetite.
 > |------|----------|-------------|
 > | `../../references/02-building-process.md` | Full building methodology: orientation, vertical integration, scopes, shipping | **Read now** — core to this skill |
 > | `../../references/05-hill-chart-protocol.md` | Hill chart model, uphill/downhill phases, stuck scope protocol | **Read now** — needed for progress tracking |
+> | `../../references/09-stack-skills-and-validation.md` | Stack-specific skill overlays and isolated validation agent protocol | **Read now** — build must apply stack verification and validate gates |
+> | `../../references/10-technical-principles.md` | YAGNI, DRY, KISS, and TDD guidance for technical shaping and build validation | **Read now** — constrains implementation choices |
 > | `../../references/04-scope-hammering-rules.md` | Scope cutting decision framework, must-have vs nice-to-have | **Read at Step 6** when capacity gets tight |
 > | `../../references/07-pitfalls.md` | Three critical failure modes | Read if scopes are stuck or work feels undershaped |
 > | `../../references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
@@ -48,6 +50,9 @@ Your job:
 
 **Critical rules**:
 - Tests first, always. Write the test, see it fail, make it pass.
+- YAGNI: build only what the current must-have behavior or approved nice-to-have requires.
+- DRY: avoid duplicated domain rules, but wait for real repeated meaning before extracting helpers.
+- KISS: choose the simplest implementation that fits existing project conventions.
 - Vertical integration: UI + backend working together for each piece. Never all-design-then-all-code.
 - Scopes are discovered through work, not pre-planned.
 - Compare to baseline, not ideal. Ship when better than what exists today.
@@ -196,17 +201,23 @@ Only after the audit and any corrections are applied do you resume or start work
    mv "$FEATURE_DIR" "$NEW"
    ```
 
-3. **Study the codebase**: Read the files mentioned in the Package's elements.
-   Understand the patterns, test framework, and conventions.
+3. **Detect stack skills**: Follow `09-stack-skills-and-validation.md` to load applicable
+   project-local or plugin-provided stack skills. Use their Build guidance for conventions,
+   TDD commands, browser/API checks, migrations, generated clients, and known pitfalls.
 
-4. **Identify the first piece** using three criteria:
+4. **Study the codebase**: Read the files mentioned in the Package's elements.
+   Understand the patterns, test framework, and conventions. Apply `10-technical-principles.md`
+   as a constraint on implementation choices: no speculative generalization, no needless abstraction,
+   simplest viable wiring, and tests before behavior implementation.
+
+5. **Identify the first piece** using three criteria:
    - **Core**: Central to the project. Without it, other work doesn't make sense.
    - **Small**: Achievable in this session to build momentum.
    - **Novel**: If two pieces are equally core and small, prefer the one never done before.
 
    Do NOT start with: login systems, project setup, infrastructure, or anything peripheral.
 
-5. **Create initial hill chart**:
+6. **Create initial hill chart**:
    ```bash
    PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
    PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
@@ -217,7 +228,7 @@ Only after the audit and any corrections are applied do you resume or start work
    bash "$SKILL_DIR/scripts/update-hillchart.sh" "$FEATURE_DIR/hillchart.md" init
    ```
 
-6. **Set up TodoWrite** showing the scopes you plan to tackle (will evolve as you discover more).
+7. **Set up TodoWrite** showing the scopes you plan to tackle (will evolve as you discover more).
 
 ### Step 2: Build First Piece (TDD + Vertical Integration)
 
@@ -229,10 +240,14 @@ Follow this cycle for the first piece:
 2. Write tests that describe what the feature should do
 3. Run tests — they should FAIL (red)
 4. This is your uphill work: you're defining what "done" looks like
+5. If no suitable automated harness exists for this layer, state why and add the smallest practical verification path before implementing
 ```
 
 **B. Implement Backend**
 Build strategically patchy:
+- Apply YAGNI: do not add generic platforms, unused options, or future-proofing outside the current behavior
+- Apply KISS: prefer local, understandable changes over clever indirection
+- Apply DRY: remove duplicated domain logic when repetition is real and meaningful, not merely similar syntax
 - Routes/endpoints that serve the UI, even with mock data
 - Model changes needed for data to flow
 - Just enough to make the tests pass and the UI work
@@ -253,7 +268,8 @@ Build strategically patchy:
 ```
 
 **E. Verify with Browser (Web Projects)**
-If this is a web project, use browser automation to verify:
+If this is a web project, use browser automation to verify. If a Playwright or other browser-testing
+stack skill is active, apply its verification checklist here:
 ```
 1. Navigate to the feature in the browser
 2. Click through the user flow
@@ -559,7 +575,11 @@ When the session must end with work remaining:
 3. **Update hillchart.md** with final positions — symbols must match each scope file's
    `## Hill Position` line. Stale tracking is the #1 reason the next session's Step 0.5
    audit finds drift.
-4. **Run the audit-mode consistency check**:
+4. **Run isolated validation before handover**: dispatch a validation agent using
+   `09-stack-skills-and-validation.md` to check behavior state vs implementation, TDD evidence,
+   YAGNI/DRY/KISS fit, active stack-skill verification, hill chart consistency, and handover accuracy. Apply
+   `FAIL` findings before committing the handover.
+5. **Run the audit-mode consistency check**:
    ```bash
    PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
    PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
@@ -571,12 +591,12 @@ When the session must end with work remaining:
    Resolve every FAIL. It is OK to end a session with WARNs (e.g. a scope exists on disk
    but isn't in the hill chart yet — note that explicitly in the handover). It is NOT OK
    to hand over with FAILs: the next session will start from a broken tracking state.
-5. **Commit the handover as its own commit.** By this point every finished scope should
+6. **Commit the handover as its own commit.** By this point every finished scope should
    already be in its own commit (Step 4.J). The handover commit contains only the
    handover document and any final tracking-doc touch-ups that weren't part of a scope
    commit (e.g. carry-over notes). Keeping handover separate from scope commits
    preserves the "one scope = one commit" grain the next session can walk through.
-6. Tell user: "Run `/build <KEY>` in a new session to continue"
+7. Tell user: "Run `/build <KEY>` in a new session to continue"
 
 ### Step 8: Ready to Ship
 
@@ -589,7 +609,11 @@ When all must-haves are complete and all scopes are downhill or done:
 
 2. **Update hill chart** — all scopes should show ✓ or ▼ near done
 
-3. **Run the pre-ship consistency check** — this is a gate, not a suggestion:
+3. **Run isolated Ready-to-Ship validation**: dispatch a validation agent using
+   `09-stack-skills-and-validation.md` to check every must-have behavior against code, TDD evidence,
+   YAGNI/DRY/KISS fit, and stack-specific verification evidence. Apply all `FAIL` findings before writing the build summary.
+
+4. **Run the pre-ship consistency check** — this is a gate, not a suggestion:
    ```bash
    PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
    PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
@@ -604,7 +628,7 @@ When all must-haves are complete and all scopes are downhill or done:
    behaviors that you've decided not to ship by prefixing with `~`, or update hill positions)
    — do NOT edit the script to silence it. Re-run until it exits 0.
 
-4. **Write build summary** for the ship phase. Before writing it, determine actual USD cost from the available source of truth (AI billing dashboard/export, cloud/SaaS invoice, time-cost conversion, or user-provided amount). If unavailable, ask the user. If still unavailable, write `Unknown` and name the missing source; never invent a number.
+5. **Write build summary** for the ship phase. Before writing it, determine actual USD cost from the available source of truth (AI billing dashboard/export, cloud/SaaS invoice, time-cost conversion, or user-provided amount). If unavailable, ask the user. If still unavailable, write `Unknown` and name the missing source; never invent a number.
    This is the builder's raw notes — ship uses it as *input* (alongside `frame.md` and `package.md`)
    to produce the formal `decisions.md`. Keep it factual; ship handles the analysis.
    Write `$FEATURE_DIR/build-summary.md` (resolve `$FEATURE_DIR` per the standard prelude):
@@ -632,15 +656,21 @@ When all must-haves are complete and all scopes are downhill or done:
    ## Files Changed
    - <List key files added or modified>
 
+   ## Stack Skills and Validation
+   - Active stack skills: <list or none detected>
+   - Technical principles: <YAGNI/DRY/KISS/TDD checks performed>
+   - Validation verdict: <PASS / PASS WITH WARNINGS>
+   - Stack-specific checks performed: <summary>
+
    ## What Surprised Us
    - <Anything harder/easier than expected, lessons learned>
    ```
 
-4. **Ask user** via AskUserQuestion:
+6. **Ask user** via AskUserQuestion:
    - "All must-haves are complete. Ready to ship?"
    - Options: "Ship it" / "One more pass" / "Need to scope hammer more"
 
-5. If shipping: Tell user to run `/ship <NNN>` to archive and produce ADRs
+7. If shipping: Tell user to run `/ship <NNN>` to archive and produce ADRs
 
 ---
 
