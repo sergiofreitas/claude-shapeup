@@ -20,6 +20,7 @@ Shipping archives a completed feature, captures architectural decisions, and upd
 > | File | Contains | When to read |
 > |------|----------|-------------|
 > | `../../references/06-agent-workflow-guide.md` | Full pipeline overview, role mapping, status formats | **Read now** — core context for archival |
+> | `../../references/09-stack-skills-and-validation.md` | Stack-specific skill overlays and isolated validation agent protocol | **Read now** — ship must validate archival and capture stack lessons |
 > | `../../references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
 > | `../../references/03-pitch-template.md` | Package format (5 ingredients) | Read if you need to interpret the Package structure |
 > | `../../references/01-shaping-process.md` | How shaping works | Read if you need context for extracting shaping decisions |
@@ -42,7 +43,7 @@ Your job:
 2. Extract architectural decisions made during the build
 3. Produce Architecture Decision Records (ADRs)
 4. Update the project's architecture documentation
-5. Archive the feature and regenerate the project dashboard
+5. Archive the feature and regenerate the project dashboard after validation passes
 
 **Critical rule**: This is about institutional memory. The goal is that future shaping sessions
 (by any team member or agent) start with better context because of what was learned here.
@@ -102,13 +103,17 @@ silently left half-done, because `build-summary.md` said "shipped" when the code
    echo "$FEATURE_DIR"
    ```
 
-2. Dispatch an Explore subagent with this question: for every must-have behavior marked
-   `[GREEN]` in every `scope-*.md` file, is there corresponding code, tests, and (for web
-   projects) a working UI affordance that makes the user-noticeable behavior observable?
-   Report any `[GREEN]` behavior marked without evidence (and any must-have behavior still
-   `[RED]`).
+2. Detect applicable stack skills using `09-stack-skills-and-validation.md`; ship uses them to
+   verify stack-specific operational lessons, migration notes, test evidence, and ADR-worthy decisions.
 
-3. Run the pre-ship consistency check:
+3. Dispatch an isolated validation agent with this question: for every must-have behavior marked
+   `[GREEN]` in every `scope-*.md` file, is there corresponding code, tests, and (for web
+   projects) a working UI affordance that makes the user-noticeable behavior observable? Also check
+   active stack-skill validation items and whether stack-specific lessons should be captured in
+   `decisions.md`, ADRs, or `docs/architecture.md`. Report any `[GREEN]` behavior marked without
+   evidence (and any must-have behavior still `[RED]`).
+
+4. Run the pre-ship consistency check:
    ```bash
    PROJECT_ROOT="${SHAPEUP_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-${CODEX_WORKSPACE_ROOT:-$(pwd)}}}"
    PLUGIN_ROOT="${SHAPEUP_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_SHAPEUP_ROOT:-$(pwd)}}}"
@@ -148,7 +153,8 @@ silently left half-done, because `build-summary.md` said "shipped" when the code
      - `decisions.md` — if already exists from build phase
 
 3. Set up TodoWrite:
-   - Verifying prior state (subagent audit + pre-ship check)
+   - Verifying prior state (isolated validation + pre-ship check)
+   - Detecting applicable stack skills
    - Reading feature documentation
    - Extracting architectural decisions
    - Producing ADRs
@@ -181,7 +187,13 @@ Go through the feature artifacts and identify:
 - What was explicitly excluded and why? (from no-gos)
 - What changed between the package and what was actually built? (compare package to scope files)
 
-**C. Lessons Learned**
+**C. Stack-Specific Lessons**
+- Which stack skills were active during build?
+- Did framework, ORM, browser automation, migration, deployment, or runtime constraints change the solution?
+- Are there conventions future shaping sessions should reuse?
+- Did any stack-specific checks become ADR-worthy?
+
+**D. Lessons Learned**
 - What was harder than expected? (scopes that stayed uphill long)
 - What was easier than expected? (scopes that flew downhill)
 - What would be shaped differently next time?
