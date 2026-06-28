@@ -20,6 +20,7 @@ Framing investigates a raw idea to determine if the problem matters enough to in
 > |------|----------|-------------|
 > | `../../references/08-framing.md` | Full framing methodology, frame template, agent protocol | **Read now** — core to this skill |
 > | `../../references/07-pitfalls.md` | Three critical failure modes (undershaped work, blurred framing/shaping, mixed work) | **Read now** — Pitfall #2 directly applies to framing |
+> | `../../references/09-stack-skills-and-validation.md` | Stack-specific skill overlays and isolated validation agent protocol | **Read now** — every phase must detect stack skills and validate gates |
 > | `../../references/00-glossary.md` | Shape Up terminology definitions | Read if you encounter an unfamiliar term |
 > | `../../references/01-shaping-process.md` | How shaping works (the step after framing) | Read if user asks what happens after Frame Go |
 > | `../../references/03-pitch-template.md` | Package format (5 ingredients) | Not needed during framing |
@@ -114,8 +115,20 @@ For shared helpers, use `hooks/lib/<name>.ps1` instead of `hooks/lib/<name>.sh`.
    - Evaluating business value
    - Setting appetite
    - Capturing cost expectation, if any
+   - Detecting applicable stack skills
    - Producing Frame document
+   - Running isolated Frame validation
    - Presenting for Frame Go
+
+### Step 1.5: Detect Stack Skills
+
+Before the Q&A, follow `09-stack-skills-and-validation.md` to scan for applicable project-local
+or plugin-provided stack skills. Load only the stack skills that clearly apply. During framing,
+use them only to find better evidence sources or sharper problem questions — do not design a
+stack-specific solution.
+
+If stack evidence matters to the problem, capture it in the Frame's Evidence or Stack Context.
+If no stack skill applies, note that for the validation report later.
 
 ### Step 2: Understand the Raw Idea
 
@@ -218,6 +231,10 @@ and what the user currently does as a workaround. This is the baseline.>
 <Data points that support urgency: metrics, query results, support ticket counts,
 user quotes, frequency of occurrence. If no hard data, state assumptions explicitly.>
 
+## Stack Context
+
+<Applicable stack skills and evidence sources checked, or `Stack skills: none detected`. Do not include solution design here.>
+
 ## Appetite
 
 <Small Batch (1 session) / Medium Batch (2-3 sessions) / Big Batch (4-5 sessions)>
@@ -236,10 +253,18 @@ user quotes, frequency of occurrence. If no hard data, state assumptions explici
 ## Status: Framing
 ```
 
-### Step 5: Present and Gate
+### Step 5: Validate, Present, and Gate
 
-1. Display the completed Frame document to the user
-2. Use **AskUserQuestion** to request Frame Go:
+1. Before presenting Frame Go, dispatch an isolated validation agent using the contract in
+   `09-stack-skills-and-validation.md`. Ask it to review `frame.md` for: problem specificity,
+   affected segment, business value, evidence, appetite, cost expectation, phase-boundary
+   compliance, and active stack-skill evidence.
+2. Apply the validation report:
+   - `FAIL`: fix `frame.md`, then re-run validation before asking for Frame Go.
+   - `PASS WITH WARNINGS`: document the warning in `frame.md` or tell the user what remains uncertain.
+   - `PASS`: continue.
+3. Display the completed Frame document to the user
+4. Use **AskUserQuestion** to request Frame Go:
    - Question: "Is this problem worth investing shaping time in?"
    - Options:
      - "Frame Go — Yes, proceed to shaping" (approve)
@@ -247,7 +272,7 @@ user quotes, frequency of occurrence. If no hard data, state assumptions explici
      - "Reject — Not the right time or priority" (archive)
      - "Discard — Problem isn't real or valuable" (discard)
 
-3. Based on response:
+5. Based on response:
    - **Frame Go**: Update `frame.md` status line to `Status: Frame Go — approved <date>`.
      The folder stays at `-framing` until `/shape` picks it up and renames it to `-shaped`.
    - **Needs refinement**: Go back to the relevant Q&A step, update frame.md
